@@ -1,5 +1,7 @@
 # streamlit_app.py
 import streamlit as st
+st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
+
 import os
 from dotenv import load_dotenv
 from common import (
@@ -13,6 +15,29 @@ from common import (
 # Load secrets if needed.
 if not st.secrets:
     load_dotenv()
+
+# --- Theme Toggle ---
+theme_choice = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0)
+if theme_choice == "Dark":
+    st.markdown(
+        """
+        <style>
+        .main { background-color: #262730; color: #FFF; }
+        .sidebar .sidebar-content { background-color: #333; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        """
+        <style>
+        .main { background-color: #FFF; color: #000; }
+        .sidebar .sidebar-content { background-color: #f0f2f6; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Initialize session state for authentication.
 if "user" not in st.session_state:
@@ -45,7 +70,6 @@ if not user:
     st.stop()
 
 # Retrieve the user's access level from the database.
-# get_user_record should query your user_access table using the discord_id.
 user_record = get_user_record(user["id"])
 if user_record:
     user["access_level"] = user_record.get("access_level", "user")
