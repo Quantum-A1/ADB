@@ -11,17 +11,14 @@ import plotly.express as px
 # Authentication via Discord OAuth
 # ------------------------------------------------------------------------------
 
-# Load local .env if running locally
 if not st.secrets:
     load_dotenv()
 
-# Initialize session state for user if not already set
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "code_exchanged" not in st.session_state:
     st.session_state["code_exchanged"] = False
 
-# Load DB credentials and Discord OAuth credentials from st.secrets (or .env)
 DB_HOST = st.secrets.get("DB_HOST") or os.getenv("DB_HOST")
 DB_USER = st.secrets.get("DB_USER") or os.getenv("DB_USER")
 DB_PASS = st.secrets.get("DB_PASS") or os.getenv("DB_PASS")
@@ -31,7 +28,6 @@ DISCORD_CLIENT_ID = st.secrets.get("DISCORD_CLIENT_ID") or os.getenv("DISCORD_CL
 DISCORD_CLIENT_SECRET = st.secrets.get("DISCORD_CLIENT_SECRET") or os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = st.secrets.get("DISCORD_REDIRECT_URI") or os.getenv("DISCORD_REDIRECT_URI")
 
-# Discord OAuth endpoints
 DISCORD_OAUTH_URL = "https://discord.com/api/oauth2/authorize"
 DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
 DISCORD_API_URL = "https://discord.com/api/users/@me"
@@ -54,10 +50,7 @@ def exchange_code_for_token(code):
         "code": code,
         "redirect_uri": DISCORD_REDIRECT_URI
     }
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json"
-    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
     if response.status_code != 200:
         st.error("Token exchange failed: " + response.text)
@@ -70,15 +63,11 @@ def fetch_user_info(access_token):
     response.raise_for_status()
     return response.json()
 
-# Process OAuth code if user is not logged in and code hasn't been processed
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
     query_params = st.query_params
     if "code" in query_params:
         code_param = query_params["code"]
-        if isinstance(code_param, list):
-            code = code_param[0]
-        else:
-            code = code_param
+        code = code_param[0] if isinstance(code_param, list) else code_param
         try:
             token_data = exchange_code_for_token(code)
             user_info = fetch_user_info(token_data["access_token"])
@@ -98,9 +87,6 @@ if not user:
     st.stop()
 st.write(f"Welcome, **{user['username']}**!")
 
-# ------------------------------------------------------------------------------
-# User Management: Allow only specific Discord users to access the dashboard
-# ------------------------------------------------------------------------------
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
 allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
 if user["id"] not in allowed_ids:
@@ -112,9 +98,12 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Generate a unique key using the user's ID
-nav_key = f"nav_radio_{user['id']}"
-page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key=nav_key)
+
+# Create navigation radio at top-level and store its selection in session state
+if "nav" not in st.session_state:
+    st.session_state["nav"] = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
+page = st.session_state["nav"]
+
 if st.sidebar.button("Logout"):
     st.session_state.pop("user", None)
     st.experimental_rerun()
@@ -253,7 +242,6 @@ def fetch_server_config(server_name):
 def dashboard_page():
     st.header("Dashboard")
     
-    # Top metrics as numbers
     stats = fetch_stats()
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Players", stats["total_players"])
@@ -261,7 +249,6 @@ def dashboard_page():
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     
-    # Summary statistics as a pie chart
     summary_df = pd.DataFrame({
         "Metric": ["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
         "Value": [stats["total_players"], stats["flagged_accounts"],
@@ -271,7 +258,6 @@ def dashboard_page():
     fig = px.pie(summary_df, values="Value", names="Metric", title="Summary Distribution")
     st.plotly_chart(fig)
     
-    # Alt Detection Trends
     st.header("Alt Detection Trends")
     server_options = ["All"] + fetch_servers()
     selected_server = st.selectbox("Select Server (for trends)", options=server_options)
@@ -339,9 +325,7 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    # Assign a unique key for the navigation radio widget using the user ID.
-    nav_key = f"nav_radio_{user['id']}"
-    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key=nav_key)
+    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
     
     if page == "Dashboard":
         dashboard_page()
