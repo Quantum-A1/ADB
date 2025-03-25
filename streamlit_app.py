@@ -3,16 +3,87 @@ import pymysql
 import pandas as pd
 import os
 from dotenv import load_dotenv
+import requests
+from urllib.parse import urlencode
+
+# ------------------------------------------------------------------------------
+# Authentication via Discord OAuth
+# ------------------------------------------------------------------------------
 
 # Load local .env if running locally
 if not st.secrets:
     load_dotenv()
 
+# Load DB credentials and Discord OAuth credentials from st.secrets (or .env)
 DB_HOST = st.secrets.get("DB_HOST") or os.getenv("DB_HOST")
 DB_USER = st.secrets.get("DB_USER") or os.getenv("DB_USER")
 DB_PASS = st.secrets.get("DB_PASS") or os.getenv("DB_PASS")
 DB_NAME = st.secrets.get("DB_NAME") or os.getenv("DB_NAME")
 
+DISCORD_CLIENT_ID = st.secrets.get("DISCORD_CLIENT_ID") or os.getenv("DISCORD_CLIENT_ID")
+DISCORD_CLIENT_SECRET = st.secrets.get("DISCORD_CLIENT_SECRET") or os.getenv("DISCORD_CLIENT_SECRET")
+DISCORD_REDIRECT_URI = st.secrets.get("DISCORD_REDIRECT_URI") or os.getenv("DISCORD_REDIRECT_URI")
+
+# Discord OAuth endpoints
+DISCORD_OAUTH_URL = "https://discord.com/api/oauth2/authorize"
+DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
+DISCORD_API_URL = "https://discord.com/api/users/@me"
+
+def login_with_discord():
+    params = {
+        "client_id": DISCORD_CLIENT_ID,
+        "redirect_uri": DISCORD_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "identify email"
+    }
+    auth_url = DISCORD_OAUTH_URL + "?" + urlencode(params)
+    st.markdown(f"[**Login with Discord**]({auth_url})", unsafe_allow_html=True)
+
+def exchange_code_for_token(code):
+    data = {
+        "client_id": DISCORD_CLIENT_ID,
+        "client_secret": DISCORD_CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": DISCORD_REDIRECT_URI,
+        "scope": "identify email"
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+def fetch_user_info(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(DISCORD_API_URL, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+# Check if the user is already logged in
+if "user" not in st.session_state:
+    query_params = st.experimental_get_query_params()
+    if "code" in query_params:
+        code = query_params["code"][0]
+        try:
+            token_data = exchange_code_for_token(code)
+            user_info = fetch_user_info(token_data["access_token"])
+            st.session_state["user"] = user_info
+            # Clear the URL query parameters
+            st.experimental_set_query_params()
+        except Exception as e:
+            st.error(f"Authentication failed: {e}")
+            st.stop()
+    else:
+        st.write("Please log in to access the dashboard.")
+        login_with_discord()
+        st.stop()
+
+st.write(f"Welcome, **{st.session_state['user']['username']}**!")
+
+# ------------------------------------------------------------------------------
+# Database Connection and Helper Functions
+# ------------------------------------------------------------------------------
+
 def get_db_connection():
     return pymysql.connect(
         host=DB_HOST,
@@ -23,23 +94,6 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-# -------------------------------
-# Helper function: Get DB connection
-# -------------------------------
-def get_db_connection():
-    return pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME,
-        autocommit=True,
-        cursorclass=pymysql.cursors.DictCursor
-    )
-
-
-# -------------------------------
-# Function: Fetch summary statistics
-# -------------------------------
 def fetch_stats():
     conn = get_db_connection()
     try:
@@ -65,9 +119,6 @@ def fetch_stats():
         "whitelisted_accounts": whitelisted_accounts
     }
 
-# -------------------------------
-# Function: Fetch alt detection trend data
-# -------------------------------
 def fetch_trend_data():
     conn = get_db_connection()
     try:
@@ -84,9 +135,6 @@ def fetch_trend_data():
 
     return pd.DataFrame(rows)
 
-# -------------------------------
-# Function: Update guild configuration (e.g., update server name)
-# -------------------------------
 def update_guild_config(guild_id, new_server_name):
     conn = get_db_connection()
     try:
@@ -100,9 +148,10 @@ def update_guild_config(guild_id, new_server_name):
     finally:
         conn.close()
 
-# -------------------------------
+# ------------------------------------------------------------------------------
 # Main Dashboard Layout
-# -------------------------------
+# ------------------------------------------------------------------------------
+
 def main():
     st.title("Alt Detection Dashboard")
 
@@ -119,7 +168,6 @@ def main():
     st.header("Alt Detection Trends")
     df_trend = fetch_trend_data()
     if not df_trend.empty:
-        # Set 'date' column as the index for the line chart
         df_trend['date'] = pd.to_datetime(df_trend['date'])
         df_trend.set_index('date', inplace=True)
         st.line_chart(df_trend)
