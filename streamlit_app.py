@@ -49,8 +49,8 @@ def exchange_code_for_token(code):
         "client_secret": DISCORD_CLIENT_SECRET,
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": DISCORD_REDIRECT_URI,
-        # "scope": "identify email"  # Remove this line
+        "redirect_uri": DISCORD_REDIRECT_URI
+        # Remove the scope parameter from the token exchange request
     }
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -59,6 +59,7 @@ def exchange_code_for_token(code):
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
     response.raise_for_status()
     return response.json()
+
 
 
 def fetch_user_info(access_token):
