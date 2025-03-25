@@ -11,18 +11,6 @@ from common import (
 )
 
 
-
-# --- Theme Toggle & Persistence ---
-# Ensure theme is stored in session state
-if "theme" not in st.session_state:
-    st.session_state.theme = "Light"
-
-# Display the theme toggle in the sidebar
-selected_theme = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0, key="theme_radio")
-if selected_theme != st.session_state.theme:
-    st.session_state.theme = selected_theme
-
-
 # Load secrets if needed.
 if not st.secrets:
     load_dotenv()
