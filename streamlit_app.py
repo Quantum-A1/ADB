@@ -9,6 +9,9 @@ from common import (
     init_db_pool,
     get_user_record  # new helper to get the user record and access level
 )
+from common import apply_theme
+apply_theme()
+
 
 # --- Theme Toggle & Persistence ---
 # Ensure theme is stored in session state
