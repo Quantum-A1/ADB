@@ -315,3 +315,39 @@ def fetch_servers_for_user(discord_id):
             return [row["server_name"] for row in rows if row["server_name"]]
     finally:
         release_db_connection(conn)
+
+def update_user_access(discord_id, new_username, new_access):
+    """
+    Updates the username and access level for the user with the given Discord ID.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            UPDATE user_access
+            SET username = %s, access_level = %s
+            WHERE discord_id = %s
+            """
+            cursor.execute(query, (new_username, new_access, discord_id))
+            conn.commit()
+            st.success("User updated successfully.")
+    except Exception as e:
+        st.error(f"Error updating user: {e}")
+    finally:
+        release_db_connection(conn)
+
+def remove_user_by_discord_id(discord_id):
+    """
+    Removes a user from the user_access table using their Discord ID.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = "DELETE FROM user_access WHERE discord_id = %s"
+            cursor.execute(query, (discord_id,))
+            conn.commit()
+            st.success("User removed successfully.")
+    except Exception as e:
+        st.error(f"Error removing user: {e}")
+    finally:
+        release_db_connection(conn)
