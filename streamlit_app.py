@@ -155,7 +155,7 @@ st.sidebar.image(logo_url, width=150)
 nav_options = ["Dashboard", "Server Management"]
 if user["id"] == BOT_OWNER_ID:
     nav_options.append("User Management")
-page = st.sidebar.radio("Navigation", nav_options)
+page = st.sidebar.radio("Navigation", nav_options, key="main_nav")
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
     st.write("Please refresh the page after logging out.")
@@ -173,9 +173,8 @@ def get_db_connection_direct():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-# In all DB functions, we use get_db_connection() from our pool and then release it.
 def get_db_connection():
-    return get_db_connection_direct()  # Using our pooling functions below
+    return get_db_connection_direct()  # You can replace this with a call to your pool functions if desired.
 
 def fetch_stats(server_name=None):
     conn = get_db_connection()
@@ -294,7 +293,6 @@ def update_server_config(new_config, old_server):
             ))
             conn.commit()
             st.success("Server configuration updated! Please refresh the page to see changes.")
-            # If the server name has changed, update the players table.
             if new_config["server_name"].strip().lower() != old_server.strip().lower():
                 update_players_server_name(old_server, new_config["server_name"])
                 st.success("All player records updated with the new server name!")
@@ -494,11 +492,10 @@ def user_management_page():
 def main():
     st.title("Alt Detection Dashboard")
     init_db_pool()  # Initialize the connection pool
-    
     nav_options = ["Dashboard", "Server Management"]
     if user["id"] == BOT_OWNER_ID:
         nav_options.append("User Management")
-    page = st.sidebar.radio("Navigation", nav_options)
+    page = st.sidebar.radio("Navigation", nav_options, key="main_nav")
     
     if page == "Dashboard":
         dashboard_page()
