@@ -99,7 +99,6 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Use the auto-generated key (no explicit key parameter)
 page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
@@ -206,7 +205,7 @@ def update_server_config(config):
                 nitrado_token = %s, 
                 alert_channel_id = %s, 
                 admin_role_id = %s 
-            WHERE guild_id = %s
+            WHERE id = %s
             """
             cursor.execute(query, (
                 config["guild_name"],
@@ -215,7 +214,7 @@ def update_server_config(config):
                 config["nitrado_token"],
                 config["alert_channel_id"],
                 config["admin_role_id"],
-                config["guild_id"]
+                config["id"]
             ))
             conn.commit()
             st.success("Server configuration updated! Please refresh the page to see changes.")
@@ -298,6 +297,8 @@ def server_management_page():
         if config:
             with st.form("edit_server_config_form", clear_on_submit=True):
                 st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
+                # Show the internal record ID so we can use it in the update query
+                st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
                 server_name = st.text_input("Server Name", value=config["server_name"])
                 nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
@@ -307,6 +308,7 @@ def server_management_page():
                 submitted = st.form_submit_button("Save Changes")
                 if submitted:
                     new_config = {
+                        "id": config["id"],  # Use the primary key (id) for the update.
                         "guild_id": config["guild_id"],
                         "guild_name": guild_name,
                         "server_name": server_name,
