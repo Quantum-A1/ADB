@@ -6,8 +6,10 @@ from common import fetch_stats, fetch_trend_data, fetch_servers, fetch_servers_f
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
+# For regular users, display only assigned servers.
+# For any user with admin-level permissions or higher, show all servers.
 if access_level == "user":
-    # Only fetch servers managed by this user. (Requires your DB to record this info.)
+    # fetch_servers_for_user should return only the servers assigned to user["id"]
     server_options = ["All"] + fetch_servers_for_user(user["id"])
 else:
     server_options = ["All"] + fetch_servers()

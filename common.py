@@ -302,19 +302,16 @@ def get_user_record(discord_id):
         release_db_connection(conn)
 
 def fetch_servers_for_user(discord_id):
-    """
-    Returns a list of server names managed by the user with the given discord_id.
-    This function assumes your guild_configs table has a 'manager_discord_id' column.
-    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            query = "SELECT DISTINCT server_name FROM guild_configs WHERE manager_discord_id = %s"
+            query = "SELECT DISTINCT server_name FROM user_servers WHERE discord_id = %s"
             cursor.execute(query, (discord_id,))
             rows = cursor.fetchall()
             return [row["server_name"] for row in rows if row["server_name"]]
     finally:
         release_db_connection(conn)
+
 
 def update_user_access(discord_id, new_username, new_access):
     """
