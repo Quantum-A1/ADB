@@ -117,13 +117,14 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
+# Updated fetch_stats() with case-insensitive, trimmed comparison
 def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             total_query = "SELECT COUNT(*) AS total_players FROM players"
             if server_name and server_name != "All":
-                total_query += " WHERE server_name = %s"
+                total_query += " WHERE LOWER(TRIM(server_name)) = LOWER(TRIM(%s))"
                 cursor.execute(total_query, (server_name,))
             else:
                 cursor.execute(total_query)
@@ -131,7 +132,7 @@ def fetch_stats(server_name=None):
 
             flagged_query = "SELECT COUNT(*) AS flagged_accounts FROM players WHERE alt_flag = TRUE"
             if server_name and server_name != "All":
-                flagged_query += " AND server_name = %s"
+                flagged_query += " AND LOWER(TRIM(server_name)) = LOWER(TRIM(%s))"
                 cursor.execute(flagged_query, (server_name,))
             else:
                 cursor.execute(flagged_query)
@@ -139,7 +140,7 @@ def fetch_stats(server_name=None):
 
             watchlisted_query = "SELECT COUNT(*) AS watchlisted_accounts FROM players WHERE watchlisted = TRUE"
             if server_name and server_name != "All":
-                watchlisted_query += " AND server_name = %s"
+                watchlisted_query += " AND LOWER(TRIM(server_name)) = LOWER(TRIM(%s))"
                 cursor.execute(watchlisted_query, (server_name,))
             else:
                 cursor.execute(watchlisted_query)
@@ -147,7 +148,7 @@ def fetch_stats(server_name=None):
 
             whitelisted_query = "SELECT COUNT(*) AS whitelisted_accounts FROM players WHERE whitelist = TRUE"
             if server_name and server_name != "All":
-                whitelisted_query += " AND server_name = %s"
+                whitelisted_query += " AND LOWER(TRIM(server_name)) = LOWER(TRIM(%s))"
                 cursor.execute(whitelisted_query, (server_name,))
             else:
                 cursor.execute(whitelisted_query)
@@ -171,7 +172,7 @@ def fetch_trend_data(server_name=None):
                 FROM player_history
             """
             if server_name and server_name != "All":
-                base_query += " WHERE server_name = %s"
+                base_query += " WHERE LOWER(TRIM(server_name)) = LOWER(TRIM(%s))"
                 base_query += " GROUP BY DATE(timestamp) ORDER BY date ASC"
                 cursor.execute(base_query, (server_name,))
             else:
@@ -193,6 +194,7 @@ def fetch_servers():
         conn.close()
     return [row["server_name"] for row in rows if row["server_name"]]
 
+# Update uses the primary key 'id' for the update.
 def update_server_config(config):
     conn = get_db_connection()
     try:
@@ -243,9 +245,9 @@ def fetch_server_config(server_name):
 def dashboard_page():
     st.header("Dashboard")
     
-    # Global Server Selector: when a server is selected, it affects all stats.
+    # Global Server Selector: This affects both the summary stats and trends.
     server_options = ["All"] + fetch_servers()
-    selected_server = st.selectbox("Select Server", options=server_options)
+    selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
     
     # Fetch stats using the selected server
     stats = fetch_stats(selected_server)
@@ -255,7 +257,7 @@ def dashboard_page():
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     
-    # Pie chart: Only include flagged, watchlisted, whitelisted accounts.
+    # Pie chart: Only flagged, watchlisted, and whitelisted accounts.
     summary_df = pd.DataFrame({
         "Metric": ["Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
         "Value": [stats["flagged_accounts"], stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
@@ -300,6 +302,7 @@ def server_management_page():
         if config:
             with st.form("edit_server_config_form", clear_on_submit=True):
                 st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
+                # Display the record's primary key (id)
                 st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
                 server_name = st.text_input("Server Name", value=config["server_name"])
