@@ -98,10 +98,19 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Create the navigation radio only once in main(), not outside.
+
+# Create the navigation radio widget only once and store its value in session state.
+if "nav" not in st.session_state:
+    st.session_state["nav"] = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
+page = st.session_state["nav"]
+
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
-    st.experimental_rerun()
+    st.session_state.pop("nav", None)
+    try:
+        st.experimental_rerun()
+    except Exception:
+        st.write("Please refresh the page.")
 
 # ------------------------------------------------------------------------------
 # Database Connection and Helper Functions
@@ -320,8 +329,8 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    # Only create the navigation radio once in main().
-    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
+    # Navigation radio is created only once (above main) and stored in session state.
+    page = st.session_state["nav"]
     
     if page == "Dashboard":
         dashboard_page()
