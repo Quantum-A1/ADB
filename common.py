@@ -351,3 +351,40 @@ def remove_user_by_discord_id(discord_id):
         st.error(f"Error removing user: {e}")
     finally:
         release_db_connection(conn)
+
+def assign_servers_to_user(discord_id, server_list):
+    """
+    Assigns the provided list of servers to the user with the given discord_id.
+    Existing assignments are removed first.
+    Assumes you have a table 'user_servers' with columns 'discord_id' and 'server_name'.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Remove current assignments for the given user
+            cursor.execute("DELETE FROM user_servers WHERE discord_id = %s", (discord_id,))
+            # Insert new assignments
+            for server in server_list:
+                cursor.execute(
+                    "INSERT INTO user_servers (discord_id, server_name) VALUES (%s, %s)",
+                    (discord_id, server)
+                )
+            conn.commit()
+            st.success("Server assignments updated successfully.")
+    except Exception as e:
+        st.error(f"Error updating server assignments: {e}")
+    finally:
+        release_db_connection(conn)
+
+def get_assigned_servers_for_user(discord_id):
+    """
+    Retrieves the list of server names assigned to the user with the given discord_id.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT server_name FROM user_servers WHERE discord_id = %s", (discord_id,))
+            rows = cursor.fetchall()
+            return [row["server_name"] for row in rows]
+    finally:
+        release_db_connection(conn)
