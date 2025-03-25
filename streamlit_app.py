@@ -112,8 +112,9 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Assign a unique key to the radio widget
-page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio")
+# Generate a unique key using the user's ID
+nav_key = f"nav_radio_{user['id']}"
+page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key=nav_key)
 if st.sidebar.button("Logout"):
     st.session_state.pop("user", None)
     st.experimental_rerun()
@@ -338,7 +339,9 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio")
+    # Assign a unique key for the navigation radio widget using the user ID.
+    nav_key = f"nav_radio_{user['id']}"
+    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key=nav_key)
     
     if page == "Dashboard":
         dashboard_page()
