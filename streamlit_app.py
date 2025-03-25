@@ -50,12 +50,16 @@ def exchange_code_for_token(code):
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": DISCORD_REDIRECT_URI,
-        "scope": "identify email"
+        # "scope": "identify email"  # Remove this line
     }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+    }
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
     response.raise_for_status()
     return response.json()
+
 
 def fetch_user_info(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
