@@ -15,7 +15,7 @@ import plotly.express as px
 if not st.secrets:
     load_dotenv()
 
-# Initialize session state variables if not already set
+# Initialize session state for user if not already set
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "code_exchanged" not in st.session_state:
@@ -70,7 +70,7 @@ def fetch_user_info(access_token):
     response.raise_for_status()
     return response.json()
 
-# Process OAuth code if user is not logged in and the code has not been processed
+# Process OAuth code only if user is not logged in and we haven't already processed a code
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
     query_params = st.query_params
     if "code" in query_params:
@@ -92,7 +92,6 @@ if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
         login_with_discord()
         st.stop()
 
-# Safe retrieval for user info
 user = st.session_state.get("user")
 if not user:
     st.error("User information is missing. Please log in.")
@@ -109,8 +108,12 @@ if user["id"] not in allowed_ids:
     st.stop()
 
 # ------------------------------------------------------------------------------
-# Sidebar Navigation and Logout
+# Sidebar Navigation, Logo, and Logout
 # ------------------------------------------------------------------------------
+# Display a logo in the sidebar (use a local image path or external URL)
+logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"  # Replace with your logo URL or path
+st.sidebar.image(logo_url, width=150)
+
 page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
 if st.sidebar.button("Logout"):
     st.session_state.pop("user", None)
@@ -251,7 +254,7 @@ def fetch_server_config(server_name):
 def dashboard_page():
     st.header("Dashboard")
     
-    # Show top metrics as numbers
+    # Top metrics as numbers
     stats = fetch_stats()
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Players", stats["total_players"])
@@ -259,7 +262,7 @@ def dashboard_page():
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     
-    # Prepare data for pie chart (summary stats)
+    # Summary statistics as a pie chart
     summary_df = pd.DataFrame({
         "Metric": ["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
         "Value": [stats["total_players"], stats["flagged_accounts"],
@@ -271,7 +274,6 @@ def dashboard_page():
     
     # Alt Detection Trends
     st.header("Alt Detection Trends")
-    # Optionally filter by server using a dropdown
     server_options = ["All"] + fetch_servers()
     selected_server = st.selectbox("Select Server (for trends)", options=server_options)
     df_trend = fetch_trend_data(selected_server)
@@ -288,7 +290,6 @@ def dashboard_page():
 def server_management_page():
     st.header("Server Management")
     st.write("Below is a list of all server configurations:")
-    # Fetch all server configs into a DataFrame for display
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -303,7 +304,6 @@ def server_management_page():
         st.write("No server configurations found.")
     
     st.subheader("Edit Server Configuration")
-    # Dropdown to select a server by name
     server_options = fetch_servers()
     if server_options:
         selected_server = st.selectbox("Select a server to edit", options=server_options)
@@ -340,7 +340,6 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    # Sidebar navigation already exists (see earlier section)
     page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
     
     if page == "Dashboard":

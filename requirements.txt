@@ -3,3 +3,4 @@ pymysql
 pandas
 python-dotenv
 cryptography
+plotly
