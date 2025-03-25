@@ -1,7 +1,5 @@
 # streamlit_app.py
 import streamlit as st
-st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
-
 import os
 from dotenv import load_dotenv
 from common import (
@@ -12,14 +10,18 @@ from common import (
     get_user_record  # new helper to get the user record and access level
 )
 
-# Load secrets if needed.
-if not st.secrets:
-    load_dotenv()
+# --- Theme Toggle & Persistence ---
+# Ensure theme is stored in session state
+if "theme" not in st.session_state:
+    st.session_state.theme = "Light"
 
-# --- Theme Toggle ---
-# Theme Toggle snippet to place at the top of your main file:
-theme_choice = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0)
-if theme_choice == "Dark":
+# Display the theme toggle in the sidebar
+selected_theme = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0, key="theme_radio")
+if selected_theme != st.session_state.theme:
+    st.session_state.theme = selected_theme
+
+# Apply CSS based on the current theme
+if st.session_state.theme == "Dark":
     st.markdown(
         """
         <style>
@@ -50,14 +52,18 @@ else:
             background-color: var(--background-color);
             color: var(--text-color);
         }
+        /* For light mode, use a darker sidebar background so text is legible */
         [data-testid="stSidebar"] {
-            background-color: #f0f2f6;
+            background-color: #dedede;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
+# Load secrets if needed.
+if not st.secrets:
+    load_dotenv()
 
 # Initialize session state for authentication.
 if "user" not in st.session_state:

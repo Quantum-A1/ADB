@@ -385,3 +385,45 @@ def get_assigned_servers_for_user(discord_id):
             return [row["server_name"] for row in rows]
     finally:
         release_db_connection(conn)
+
+def apply_theme():
+    if "theme" not in st.session_state:
+        st.session_state.theme = "Light"
+    if st.session_state.theme == "Dark":
+        st.markdown(
+            """
+            <style>
+            :root {
+                --background-color: #262730;
+                --text-color: #FFF;
+            }
+            [data-testid="stAppViewContainer"] {
+                background-color: var(--background-color);
+                color: var(--text-color);
+            }
+            [data-testid="stSidebar"] {
+                background-color: #333;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+            :root {
+                --background-color: #FFF;
+                --text-color: #000;
+            }
+            [data-testid="stAppViewContainer"] {
+                background-color: var(--background-color);
+                color: var(--text-color);
+            }
+            [data-testid="stSidebar"] {
+                background-color: #dedede;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )

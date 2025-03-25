@@ -14,6 +14,9 @@ from common import (
     assign_servers_to_user,         # new helper function
     get_assigned_servers_for_user   # new helper function
 )
+from common import apply_theme
+apply_theme()
+
 
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")

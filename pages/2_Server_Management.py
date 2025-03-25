@@ -8,6 +8,9 @@ from common import (
     fetch_server_config,
     update_server_config
 )
+from common import apply_theme
+apply_theme()
+
 
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
