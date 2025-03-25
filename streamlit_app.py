@@ -98,10 +98,11 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Create the navigation radio only once in main(), not outside.
+page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
-    st.experimental_rerun()
+    st.session_state.pop("nav", None)
+    st.write("Please refresh the page after logging out.")
 
 # ------------------------------------------------------------------------------
 # Database Connection and Helper Functions
@@ -192,6 +193,7 @@ def fetch_servers():
         conn.close()
     return [row["server_name"] for row in rows if row["server_name"]]
 
+import pymysql.err
 def update_server_config(config):
     conn = get_db_connection()
     try:
@@ -216,7 +218,12 @@ def update_server_config(config):
                 config["guild_id"]
             ))
             conn.commit()
-            st.success("Server configuration updated!")
+            st.success("Server configuration updated! Please refresh the page to see changes.")
+    except pymysql.err.IntegrityError as e:
+        if e.args[0] == 1062:
+            st.error("Duplicate entry error: This server name already exists for this guild. Please choose a different server name.")
+        else:
+            st.error(f"Database integrity error: {e}")
     except Exception as e:
         st.error(f"Error updating config: {e}")
     finally:
@@ -309,7 +316,7 @@ def server_management_page():
                         "admin_role_id": admin_role_id
                     }
                     update_server_config(new_config)
-                    st.experimental_rerun()
+                    st.write("Update complete. Please refresh the page to see updated information.")
         else:
             st.error("Could not fetch configuration for the selected server.")
     else:
@@ -320,7 +327,6 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    # Only create the navigation radio once in main().
     page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
     
     if page == "Dashboard":
