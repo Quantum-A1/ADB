@@ -78,7 +78,7 @@ DISCORD_CLIENT_ID = st.secrets.get("DISCORD_CLIENT_ID") or os.getenv("DISCORD_CL
 DISCORD_CLIENT_SECRET = st.secrets.get("DISCORD_CLIENT_SECRET") or os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = st.secrets.get("DISCORD_REDIRECT_URI") or os.getenv("DISCORD_REDIRECT_URI")
 
-# Define BOT_OWNER_ID in your secrets for the bot owner’s discord ID
+# BOT_OWNER_ID should be set in your secrets for the bot owner’s discord ID.
 BOT_OWNER_ID = st.secrets.get("BOT_OWNER_ID") or os.getenv("BOT_OWNER_ID")
 
 DISCORD_OAUTH_URL = "https://discord.com/api/oauth2/authorize"
@@ -140,7 +140,7 @@ if not user:
     st.stop()
 st.write(f"Welcome, **{user['username']}**!")
 
-# Only allow access if user is in allowed_ids
+# Only allow access if user is in allowed_ids.
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
 allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
 if user["id"] not in allowed_ids:
@@ -152,11 +152,11 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Add new navigation option for User Management (bot owner only)
+# Build navigation options; include "User Management" if user is bot owner.
 nav_options = ["Dashboard", "Server Management"]
 if user["id"] == BOT_OWNER_ID:
     nav_options.append("User Management")
-page = st.sidebar.radio("Navigation", nav_options, key="nav_radio_unique")
+page = st.sidebar.radio("Navigation", nav_options)
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
     st.write("Please refresh the page after logging out.")
@@ -174,7 +174,6 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-# In all DB functions, use release_db_connection(conn) instead of conn.close()
 def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
@@ -251,7 +250,7 @@ def fetch_servers():
         release_db_connection(conn)
     return [row["server_name"] for row in rows if row["server_name"]]
 
-# New helper: update players table when server name changes.
+# New helper: update players table with the new server name.
 def update_players_server_name(old_server, new_server):
     conn = get_db_connection()
     try:
@@ -314,7 +313,7 @@ def fetch_server_config(server_name):
     finally:
         release_db_connection(conn)
 
-# New functions for User Management (for bot owner)
+# New functions for User Management (for Bot Owner)
 def fetch_user_access():
     conn = get_db_connection()
     try:
@@ -360,7 +359,7 @@ def remove_user_access(record_id):
 def dashboard_page():
     st.header("Dashboard")
     
-    # Global Server Selector for stats and trends.
+    # Global Server Selector: This affects both the summary stats and trends.
     server_options = ["All"] + fetch_servers()
     selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
     
@@ -372,7 +371,7 @@ def dashboard_page():
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     
-    # Pie chart: only flagged, watchlisted, and whitelisted accounts.
+    # Pie chart: Only flagged, watchlisted, and whitelisted accounts.
     summary_df = pd.DataFrame({
         "Metric": ["Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
         "Value": [stats["flagged_accounts"], stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
@@ -381,7 +380,6 @@ def dashboard_page():
     fig = px.pie(summary_df, values="Value", names="Metric", title="Summary Distribution")
     st.plotly_chart(fig)
     
-    # Alt Detection Trends.
     st.header("Alt Detection Trends")
     df_trend = fetch_trend_data(selected_server)
     if not df_trend.empty:
@@ -420,7 +418,7 @@ def server_management_page():
                 st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
                 st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
-                old_server = config["server_name"]
+                old_server = config["server_name"]  # Save the old server name.
                 server_name = st.text_input("Server Name", value=config["server_name"])
                 nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
                 nitrado_token = st.text_input("Nitrado Token", value=config["nitrado_token"])
@@ -449,7 +447,6 @@ def server_management_page():
 # User Management Page (for Bot Owner)
 # ------------------------------------------------------------------------------
 def user_management_page():
-    # Ensure only the bot owner can access this page.
     if user["id"] != BOT_OWNER_ID:
         st.error("Access Denied: Only the bot owner can access this page.")
         return
@@ -467,7 +464,7 @@ def user_management_page():
     with st.form("add_user_form", clear_on_submit=True):
         new_discord_id = st.text_input("Discord ID")
         new_username = st.text_input("Username")
-        new_access = st.text_input("Access Level", value="user")  # You can adjust this field as needed.
+        new_access = st.text_input("Access Level", value="user")
         add_submitted = st.form_submit_button("Add User")
         if add_submitted:
             if new_discord_id and new_username:
@@ -530,11 +527,10 @@ def remove_user_access(record_id):
 def main():
     st.title("Alt Detection Dashboard")
     init_db_pool()  # Initialize connection pool
-    # Navigation: add "User Management" if the logged-in user's ID equals BOT_OWNER_ID.
     nav_options = ["Dashboard", "Server Management"]
     if user["id"] == BOT_OWNER_ID:
         nav_options.append("User Management")
-    page = st.sidebar.radio("Navigation", nav_options, key="nav_radio_unique")
+    page = st.sidebar.radio("Navigation", nav_options)
     
     if page == "Dashboard":
         dashboard_page()
