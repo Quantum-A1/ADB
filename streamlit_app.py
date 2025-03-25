@@ -70,6 +70,7 @@ def fetch_user_info(access_token):
 # Check if the user is already logged in
 if st.session_state["user"] is None:
     query_params = st.query_params  # Updated API call
+    st.write("Query parameters:", query_params)  # Debug: show query parameters
     if "code" in query_params:
         code = query_params["code"][0]
         # Log the received code (temporary; remove in production)
@@ -79,7 +80,7 @@ if st.session_state["user"] is None:
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
             # Clear the URL query parameters to ensure single use of the code
-            st.set_query_params()
+            st.set_query_params()  # Updated API call
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
@@ -87,6 +88,7 @@ if st.session_state["user"] is None:
         st.write("Please log in to access the dashboard.")
         login_with_discord()
         st.stop()
+
 
 # Safe retrieval for user info
 user = st.session_state.get("user")
