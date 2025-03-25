@@ -1,6 +1,7 @@
 # pages/3_User_Management.py
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from common import (
     BOT_OWNER_ID,
     get_db_connection,
@@ -24,12 +25,29 @@ st.header("User Management")
 # Fetch current users.
 df_users = fetch_user_access()
 
-# Stats: Count how many users per permission type.
 if not df_users.empty:
-    st.subheader("User Stats")
-    stats_df = df_users["access_level"].value_counts().reset_index()
-    stats_df.columns = ["Access Level", "Count"]
-    st.dataframe(stats_df)
+    # Display user stats similar to Dashboard.
+    access_counts = df_users["access_level"].value_counts().to_dict()
+    total_users = len(df_users)
+    user_count = access_counts.get("user", 0)
+    moderator_count = access_counts.get("moderator", 0)
+    admin_count = access_counts.get("admin", 0)
+    super_admin_count = access_counts.get("super-admin", 0)
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Total Users", total_users)
+    col2.metric("User", user_count)
+    col3.metric("Moderator", moderator_count)
+    col4.metric("Admin", admin_count)
+    col5.metric("Super-admin", super_admin_count)
+    
+    st.subheader("User Access Distribution")
+    stats_df = pd.DataFrame({
+        "Access Level": list(access_counts.keys()),
+        "Count": list(access_counts.values())
+    })
+    fig = px.pie(stats_df, values="Count", names="Access Level", title="User Access Distribution")
+    st.plotly_chart(fig)
 else:
     st.write("No user access records found.")
 
