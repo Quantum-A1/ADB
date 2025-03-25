@@ -57,13 +57,9 @@ def exchange_code_for_token(code):
     }
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
     if response.status_code != 200:
-        # Log the raw error details
         st.error("Token exchange failed: " + response.text)
         response.raise_for_status()
     return response.json()
-
-
-
 
 def fetch_user_info(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -76,12 +72,14 @@ if st.session_state["user"] is None:
     query_params = st.query_params  # Updated API call
     if "code" in query_params:
         code = query_params["code"][0]
+        # Log the received code (temporary; remove in production)
+        st.write("Received code:", code)
         try:
             token_data = exchange_code_for_token(code)
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
-            # Clear the URL query parameters to avoid reprocessing
-            st.set_query_params()  # Updated API call
+            # Clear the URL query parameters to ensure single use of the code
+            st.set_query_params()
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
@@ -90,7 +88,7 @@ if st.session_state["user"] is None:
         login_with_discord()
         st.stop()
 
-# Use a safe retrieval for user info before displaying welcome message
+# Safe retrieval for user info
 user = st.session_state.get("user")
 if not user:
     st.error("User information is missing. Please log in.")
