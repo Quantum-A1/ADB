@@ -110,7 +110,7 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 # Sidebar Navigation, Logo, and Logout
 # ------------------------------------------------------------------------------
-logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"  # Replace with your logo URL or file path
+logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
 page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
 if st.sidebar.button("Logout"):
@@ -120,7 +120,6 @@ if st.sidebar.button("Logout"):
 # ------------------------------------------------------------------------------
 # Database Connection and Helper Functions
 # ------------------------------------------------------------------------------
-
 def get_db_connection():
     return pymysql.connect(
         host=DB_HOST,
