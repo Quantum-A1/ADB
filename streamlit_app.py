@@ -70,7 +70,7 @@ def fetch_user_info(access_token):
     response.raise_for_status()
     return response.json()
 
-# Process OAuth code only if user is not logged in and we haven't already processed a code
+# Process OAuth code if user is not logged in and code has not been processed
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
     query_params = st.query_params
     if "code" in query_params:
@@ -110,12 +110,10 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 # Sidebar Navigation, Logo, and Logout
 # ------------------------------------------------------------------------------
-# Display a logo in the sidebar (use a local image path or external URL)
-logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"  # Replace with your logo URL or path
+logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"  # Replace with your logo URL or file path
 st.sidebar.image(logo_url, width=150)
-
-page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
-if st.sidebar.button("Logout"):
+page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="navigation_radio")
+if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
     st.experimental_rerun()
 
@@ -256,7 +254,7 @@ def dashboard_page():
     
     # Top metrics as numbers
     stats = fetch_stats()
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4, key="metrics_columns")
     col1.metric("Total Players", stats["total_players"])
     col2.metric("Flagged Accounts", stats["flagged_accounts"])
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
@@ -275,7 +273,7 @@ def dashboard_page():
     # Alt Detection Trends
     st.header("Alt Detection Trends")
     server_options = ["All"] + fetch_servers()
-    selected_server = st.selectbox("Select Server (for trends)", options=server_options)
+    selected_server = st.selectbox("Select Server (for trends)", options=server_options, key="trend_server")
     df_trend = fetch_trend_data(selected_server)
     if not df_trend.empty:
         df_trend['date'] = pd.to_datetime(df_trend['date'])
@@ -306,18 +304,18 @@ def server_management_page():
     st.subheader("Edit Server Configuration")
     server_options = fetch_servers()
     if server_options:
-        selected_server = st.selectbox("Select a server to edit", options=server_options)
+        selected_server = st.selectbox("Select a server to edit", options=server_options, key="edit_server")
         config = fetch_server_config(selected_server)
         if config:
-            with st.form("edit_server_config_form"):
-                guild_id = st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
-                guild_name = st.text_input("Guild Name", value=config["guild_name"])
-                server_name = st.text_input("Server Name", value=config["server_name"])
-                nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
-                nitrado_token = st.text_input("Nitrado Token", value=config["nitrado_token"])
-                alert_channel_id = st.text_input("Alert Channel ID", value=str(config["alert_channel_id"]))
-                admin_role_id = st.text_input("Admin Role ID", value=str(config["admin_role_id"]))
-                submitted = st.form_submit_button("Save Changes")
+            with st.form("edit_server_config_form", clear_on_submit=True):
+                guild_id = st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True, key="guild_id")
+                guild_name = st.text_input("Guild Name", value=config["guild_name"], key="guild_name")
+                server_name = st.text_input("Server Name", value=config["server_name"], key="server_name")
+                nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"], key="nitrado_service_id")
+                nitrado_token = st.text_input("Nitrado Token", value=config["nitrado_token"], key="nitrado_token")
+                alert_channel_id = st.text_input("Alert Channel ID", value=str(config["alert_channel_id"]), key="alert_channel_id")
+                admin_role_id = st.text_input("Admin Role ID", value=str(config["admin_role_id"]), key="admin_role_id")
+                submitted = st.form_submit_button("Save Changes", key="save_config")
                 if submitted:
                     new_config = {
                         "guild_id": config["guild_id"],
@@ -340,7 +338,7 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
+    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio")
     
     if page == "Dashboard":
         dashboard_page()
