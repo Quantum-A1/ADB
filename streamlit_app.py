@@ -243,25 +243,28 @@ def fetch_server_config(server_name):
 def dashboard_page():
     st.header("Dashboard")
     
-    stats = fetch_stats()
+    # Global Server Selector: when a server is selected, it affects all stats.
+    server_options = ["All"] + fetch_servers()
+    selected_server = st.selectbox("Select Server", options=server_options)
+    
+    # Fetch stats using the selected server
+    stats = fetch_stats(selected_server)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Players", stats["total_players"])
     col2.metric("Flagged Accounts", stats["flagged_accounts"])
     col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     
+    # Pie chart: Only include flagged, watchlisted, whitelisted accounts.
     summary_df = pd.DataFrame({
-        "Metric": ["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
-        "Value": [stats["total_players"], stats["flagged_accounts"],
-                  stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
+        "Metric": ["Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
+        "Value": [stats["flagged_accounts"], stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
     })
     st.subheader("Summary Statistics Distribution")
     fig = px.pie(summary_df, values="Value", names="Metric", title="Summary Distribution")
     st.plotly_chart(fig)
     
     st.header("Alt Detection Trends")
-    server_options = ["All"] + fetch_servers()
-    selected_server = st.selectbox("Select Server (for trends)", options=server_options)
     df_trend = fetch_trend_data(selected_server)
     if not df_trend.empty:
         df_trend['date'] = pd.to_datetime(df_trend['date'])
@@ -297,7 +300,6 @@ def server_management_page():
         if config:
             with st.form("edit_server_config_form", clear_on_submit=True):
                 st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
-                # Show the internal record ID so we can use it in the update query
                 st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
                 server_name = st.text_input("Server Name", value=config["server_name"])
@@ -308,7 +310,7 @@ def server_management_page():
                 submitted = st.form_submit_button("Save Changes")
                 if submitted:
                     new_config = {
-                        "id": config["id"],  # Use the primary key (id) for the update.
+                        "id": config["id"],
                         "guild_id": config["guild_id"],
                         "guild_name": guild_name,
                         "server_name": server_name,
