@@ -14,6 +14,10 @@ from urllib.parse import urlencode
 if not st.secrets:
     load_dotenv()
 
+# Initialize session state for user if not already set
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
 # Load DB credentials and Discord OAuth credentials from st.secrets (or .env)
 DB_HOST = st.secrets.get("DB_HOST") or os.getenv("DB_HOST")
 DB_USER = st.secrets.get("DB_USER") or os.getenv("DB_USER")
@@ -60,7 +64,7 @@ def fetch_user_info(access_token):
     return response.json()
 
 # Check if the user is already logged in
-if "user" not in st.session_state:
+if st.session_state["user"] is None:
     query_params = st.query_params  # Updated API call
     if "code" in query_params:
         code = query_params["code"][0]
@@ -77,6 +81,11 @@ if "user" not in st.session_state:
         st.write("Please log in to access the dashboard.")
         login_with_discord()
         st.stop()
+
+# Additional check to ensure user info is set
+if st.session_state["user"] is None:
+    st.error("User information is missing. Please try logging in again.")
+    st.stop()
 
 st.write(f"Welcome, **{st.session_state['user']['username']}**!")
 
