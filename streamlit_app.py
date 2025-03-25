@@ -155,7 +155,7 @@ st.sidebar.image(logo_url, width=150)
 nav_options = ["Dashboard", "Server Management"]
 if user["id"] == BOT_OWNER_ID:
     nav_options.append("User Management")
-page = st.sidebar.radio("Navigation", nav_options, key="main_nav")
+page = st.sidebar.radio("Navigation", nav_options)  # No explicit key to avoid duplicate keys.
 if st.sidebar.button("Logout", key="logout_button"):
     st.session_state.pop("user", None)
     st.write("Please refresh the page after logging out.")
@@ -174,7 +174,7 @@ def get_db_connection_direct():
     )
 
 def get_db_connection():
-    return get_db_connection_direct()  # You can replace this with a call to your pool functions if desired.
+    return get_db_connection_direct()  # For simplicity, you can replace this with pooling calls.
 
 def fetch_stats(server_name=None):
     conn = get_db_connection()
@@ -316,54 +316,12 @@ def fetch_server_config(server_name):
         release_db_connection(conn)
 
 # ------------------------------------------------------------------------------
-# User Management Functions (for Bot Owner)
-# ------------------------------------------------------------------------------
-def fetch_user_access():
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM user_access")
-            rows = cursor.fetchall()
-    finally:
-        release_db_connection(conn)
-    return pd.DataFrame(rows)
-
-def add_user_access(discord_id, username, access_level):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            query = """
-            INSERT INTO user_access (discord_id, username, access_level)
-            VALUES (%s, %s, %s)
-            """
-            cursor.execute(query, (discord_id, username, access_level))
-            conn.commit()
-            st.success("User added successfully.")
-    except pymysql.err.IntegrityError as e:
-        st.error(f"Error: A user with that Discord ID may already exist. {e}")
-    finally:
-        release_db_connection(conn)
-
-def remove_user_access(record_id):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            query = "DELETE FROM user_access WHERE id = %s"
-            cursor.execute(query, (record_id,))
-            conn.commit()
-            st.success("User removed successfully.")
-    except Exception as e:
-        st.error(f"Error removing user: {e}")
-    finally:
-        release_db_connection(conn)
-
-# ------------------------------------------------------------------------------
 # Dashboard Page (Global Stats & Trends)
 # ------------------------------------------------------------------------------
 def dashboard_page():
     st.header("Dashboard")
     
-    # Global Server Selector affects both summary stats and trends.
+    # Global Server Selector: This affects both summary stats and trends.
     server_options = ["All"] + fetch_servers()
     selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
     
@@ -486,6 +444,45 @@ def user_management_page():
             else:
                 st.error("Please provide a valid Record ID.")
 
+def fetch_user_access():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM user_access")
+            rows = cursor.fetchall()
+    finally:
+        release_db_connection(conn)
+    return pd.DataFrame(rows)
+
+def add_user_access(discord_id, username, access_level):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            INSERT INTO user_access (discord_id, username, access_level)
+            VALUES (%s, %s, %s)
+            """
+            cursor.execute(query, (discord_id, username, access_level))
+            conn.commit()
+            st.success("User added successfully.")
+    except pymysql.err.IntegrityError as e:
+        st.error(f"Error: A user with that Discord ID may already exist. {e}")
+    finally:
+        release_db_connection(conn)
+
+def remove_user_access(record_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = "DELETE FROM user_access WHERE id = %s"
+            cursor.execute(query, (record_id,))
+            conn.commit()
+            st.success("User removed successfully.")
+    except Exception as e:
+        st.error(f"Error removing user: {e}")
+    finally:
+        release_db_connection(conn)
+
 # ------------------------------------------------------------------------------
 # Main Application Navigation
 # ------------------------------------------------------------------------------
@@ -495,7 +492,7 @@ def main():
     nav_options = ["Dashboard", "Server Management"]
     if user["id"] == BOT_OWNER_ID:
         nav_options.append("User Management")
-    page = st.sidebar.radio("Navigation", nav_options, key="main_nav")
+    page = st.sidebar.radio("Navigation", nav_options)
     
     if page == "Dashboard":
         dashboard_page()
