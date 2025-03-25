@@ -17,6 +17,8 @@ if not st.secrets:
 # Initialize session state for user if not already set
 if "user" not in st.session_state:
     st.session_state["user"] = None
+if "code_exchanged" not in st.session_state:
+    st.session_state["code_exchanged"] = False
 
 # Load DB credentials and Discord OAuth credentials from st.secrets (or .env)
 DB_HOST = st.secrets.get("DB_HOST") or os.getenv("DB_HOST")
@@ -67,23 +69,22 @@ def fetch_user_info(access_token):
     response.raise_for_status()
     return response.json()
 
-# Check if the user is already logged in
-if st.session_state["user"] is None:
+# Process OAuth code only if user info is not set and we haven't already processed a code
+if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
     query_params = st.query_params  # Updated API call
-    st.write("Query parameters:", query_params)  # Debug print
+    st.write("Query parameters:", query_params)  # Debug: remove in production if needed
     if "code" in query_params:
-        # Handle whether query_params["code"] is a list or a string:
-        if isinstance(query_params["code"], list):
-            code = query_params["code"][0]
+        code_param = query_params["code"]
+        if isinstance(code_param, list):
+            code = code_param[0]
         else:
-            code = query_params["code"]
-        st.write("Received code:", code)  # Debug print
+            code = code_param
+        st.write("Received code:", code)  # Debug: remove in production if needed
         try:
             token_data = exchange_code_for_token(code)
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
-            # Clear the URL query parameters to ensure single use of the code
-            st.experimental_set_query_params()
+            st.session_state["code_exchanged"] = True  # Mark that we have processed the code
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
@@ -92,11 +93,12 @@ if st.session_state["user"] is None:
         login_with_discord()
         st.stop()
 
-# Use a safe retrieval for user info before displaying welcome message
+# Ensure user info is set before proceeding
 user = st.session_state.get("user")
 if not user:
     st.error("User information is missing. Please log in.")
     st.stop()
+
 st.write(f"Welcome, **{user['username']}**!")
 
 # ------------------------------------------------------------------------------
