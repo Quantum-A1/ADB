@@ -7,6 +7,60 @@ import requests
 from urllib.parse import urlencode
 import plotly.express as px
 import pymysql.err
+import queue
+
+# ------------------------------------------------------------------------------
+# Database Connection Pooling
+# ------------------------------------------------------------------------------
+
+# Create a global connection pool with max size 10.
+connection_pool = queue.Queue(maxsize=10)
+
+def init_db_pool():
+    """Pre-populate the connection pool with 10 connections."""
+    for _ in range(10):
+        conn = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASS,
+            database=DB_NAME,
+            autocommit=True,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        connection_pool.put(conn)
+
+def get_db_connection():
+    """Get a connection from the pool if available; otherwise, create a new one."""
+    try:
+        conn = connection_pool.get_nowait()
+        # Check if connection is still open; if not, create a new one.
+        if not conn.open:
+            conn = pymysql.connect(
+                host=DB_HOST,
+                user=DB_USER,
+                password=DB_PASS,
+                database=DB_NAME,
+                autocommit=True,
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        return conn
+    except queue.Empty:
+        # Pool is empty, so create a new connection.
+        return pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASS,
+            database=DB_NAME,
+            autocommit=True,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+
+def release_db_connection(conn):
+    """Return the connection to the pool if not full; otherwise, close it."""
+    try:
+        connection_pool.put_nowait(conn)
+    except queue.Full:
+        conn.close()
 
 # ------------------------------------------------------------------------------
 # Authentication via Discord OAuth
@@ -104,19 +158,13 @@ if st.sidebar.button("Logout", key="logout_button"):
     st.write("Please refresh the page after logging out.")
 
 # ------------------------------------------------------------------------------
-# Database Connection and Helper Functions
+# Database Connection and Helper Functions (using Connection Pooling)
 # ------------------------------------------------------------------------------
-def get_db_connection():
-    return pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME,
-        autocommit=True,
-        cursorclass=pymysql.cursors.DictCursor
-    )
+def get_db_connection_from_pool():
+    return get_db_connection()  # This function now uses our pooling below.
 
-# When filtering, we use a LIKE clause to account for potential whitespace or case differences.
+# In all database functions below, replace conn.close() with release_db_connection(conn)
+
 def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
@@ -153,7 +201,7 @@ def fetch_stats(server_name=None):
                 cursor.execute(whitelisted_query)
             whitelisted_accounts = cursor.fetchone()["whitelisted_accounts"]
     finally:
-        conn.close()
+        release_db_connection(conn)
 
     return {
         "total_players": total_players,
@@ -179,7 +227,7 @@ def fetch_trend_data(server_name=None):
                 cursor.execute(base_query)
             rows = cursor.fetchall()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
     return pd.DataFrame(rows)
 
@@ -190,7 +238,7 @@ def fetch_servers():
             cursor.execute("SELECT DISTINCT server_name FROM guild_configs")
             rows = cursor.fetchall()
     finally:
-        conn.close()
+        release_db_connection(conn)
     return [row["server_name"] for row in rows if row["server_name"]]
 
 # New helper function: update players table with the new server name.
@@ -206,10 +254,10 @@ def update_players_server_name(old_server, new_server):
             cursor.execute(query, (new_server, old_server))
             conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 # Update uses the primary key 'id' for the update in guild_configs.
-# Additionally, if the server name has changed, update players table.
+# Additionally, if the server name has changed, update the players table.
 def update_server_config(new_config, old_server):
     conn = get_db_connection()
     try:
@@ -247,7 +295,7 @@ def update_server_config(new_config, old_server):
     except Exception as e:
         st.error(f"Error updating config: {e}")
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 def fetch_server_config(server_name):
     conn = get_db_connection()
@@ -256,7 +304,7 @@ def fetch_server_config(server_name):
             cursor.execute("SELECT * FROM guild_configs WHERE server_name = %s", (server_name,))
             return cursor.fetchone()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 # ------------------------------------------------------------------------------
 # Dashboard Page (Global Stats & Trends)
@@ -307,7 +355,7 @@ def server_management_page():
             cursor.execute("SELECT * FROM guild_configs")
             server_configs = cursor.fetchall()
     finally:
-        conn.close()
+        release_db_connection(conn)
     if server_configs:
         df_configs = pd.DataFrame(server_configs)
         st.dataframe(df_configs)
@@ -322,10 +370,9 @@ def server_management_page():
         if config:
             with st.form("edit_server_config_form", clear_on_submit=True):
                 st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
-                # Display the record's primary key (id)
                 st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
-                # Save the old server name so we can update the players table if changed.
+                # Save the old server name for later comparison.
                 old_server = config["server_name"]
                 server_name = st.text_input("Server Name", value=config["server_name"])
                 nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
@@ -356,6 +403,9 @@ def server_management_page():
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
+    # Initialize DB connection pool at the start of the app.
+    init_db_pool()
+    
     page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"], key="nav_radio_unique")
     
     if page == "Dashboard":
