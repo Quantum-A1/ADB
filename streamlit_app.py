@@ -82,19 +82,19 @@ if st.session_state["user"] is None:
         login_with_discord()
         st.stop()
 
-# Additional check to ensure user info is set
-if st.session_state["user"] is None:
-    st.error("User information is missing. Please try logging in again.")
+# Use a safe retrieval for user info before displaying welcome message
+user = st.session_state.get("user")
+if not user:
+    st.error("User information is missing. Please log in.")
     st.stop()
-
-st.write(f"Welcome, **{st.session_state['user']['username']}**!")
+st.write(f"Welcome, **{user['username']}**!")
 
 # ------------------------------------------------------------------------------
 # User Management: Allow only specific Discord users to access the dashboard
 # ------------------------------------------------------------------------------
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
 allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
-if st.session_state["user"]["id"] not in allowed_ids:
+if user["id"] not in allowed_ids:
     st.error("Access Denied: You are not authorized to view this dashboard.")
     st.stop()
 
