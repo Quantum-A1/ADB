@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from common import fetch_stats, fetch_trend_data, fetch_servers, fetch_servers_for_user
-from common import apply_theme
-apply_theme()
+
 
 
 user = st.session_state.get("user")

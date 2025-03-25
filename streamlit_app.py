@@ -9,8 +9,7 @@ from common import (
     init_db_pool,
     get_user_record  # new helper to get the user record and access level
 )
-from common import apply_theme
-apply_theme()
+
 
 
 # --- Theme Toggle & Persistence ---
@@ -23,46 +22,6 @@ selected_theme = st.sidebar.radio("Select Theme", options=["Light", "Dark"], ind
 if selected_theme != st.session_state.theme:
     st.session_state.theme = selected_theme
 
-# Apply CSS based on the current theme
-if st.session_state.theme == "Dark":
-    st.markdown(
-        """
-        <style>
-        :root {
-            --background-color: #262730;
-            --text-color: #FFF;
-        }
-        [data-testid="stAppViewContainer"] {
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-        [data-testid="stSidebar"] {
-            background-color: #333;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-else:
-    st.markdown(
-        """
-        <style>
-        :root {
-            --background-color: #FFF;
-            --text-color: #000;
-        }
-        [data-testid="stAppViewContainer"] {
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-        /* For light mode, use a darker sidebar background so text is legible */
-        [data-testid="stSidebar"] {
-            background-color: #dedede;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
 
 # Load secrets if needed.
 if not st.secrets:
