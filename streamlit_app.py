@@ -10,6 +10,8 @@ from common import (
     get_user_record  # new helper to get the user record and access level
 )
 
+st.set_page_config(layout="wide")
+
 
 # Load secrets if needed.
 if not st.secrets:
