@@ -2,7 +2,13 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from common import login_with_discord, exchange_code_for_token, fetch_user_info, init_db_pool
+from common import (
+    login_with_discord,
+    exchange_code_for_token,
+    fetch_user_info,
+    init_db_pool,
+    get_user_record  # new helper to get the user record and access level
+)
 
 # Load secrets if needed.
 if not st.secrets:
@@ -16,7 +22,7 @@ if "code_exchanged" not in st.session_state:
 
 # Authentication via Discord OAuth.
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
-    query_params = st.query_params  # Updated: use st.query_params instead of st.experimental_get_query_params
+    query_params = st.query_params  # Using st.query_params as required
     if "code" in query_params:
         code_param = query_params["code"]
         code = code_param[0] if isinstance(code_param, list) else code_param
@@ -38,9 +44,19 @@ if not user:
     st.error("User information is missing. Please log in.")
     st.stop()
 
-st.write(f"Welcome, **{user['username']}**!")
+# Retrieve the user's access level from the database.
+# get_user_record should query your user_access table using the discord_id.
+user_record = get_user_record(user["id"])
+if user_record:
+    user["access_level"] = user_record.get("access_level", "user")
+else:
+    user["access_level"] = "user"  # default access level
 
-# Authorization check.
+st.session_state["user"] = user
+
+st.write(f"Welcome, **{user['username']}**! Your access level is **{user['access_level']}**.")
+
+# (Optional) Additional authorization: restrict access if the user is not in the allowed IDs.
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
 allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
 if user["id"] not in allowed_ids:

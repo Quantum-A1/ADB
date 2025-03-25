@@ -290,3 +290,13 @@ def remove_user_access(record_id):
         st.error(f"Error removing user: {e}")
     finally:
         release_db_connection(conn)
+
+# Add this function to common.py
+def get_user_record(discord_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM user_access WHERE discord_id = %s", (discord_id,))
+            return cursor.fetchone()
+    finally:
+        release_db_connection(conn)
