@@ -61,15 +61,15 @@ def fetch_user_info(access_token):
 
 # Check if the user is already logged in
 if "user" not in st.session_state:
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params  # Updated API call
     if "code" in query_params:
         code = query_params["code"][0]
         try:
             token_data = exchange_code_for_token(code)
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
-            # Clear the URL query parameters
-            st.experimental_set_query_params()
+            # Clear the URL query parameters to avoid reprocessing
+            st.set_query_params()  # Updated API call
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
