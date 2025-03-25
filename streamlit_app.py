@@ -83,7 +83,7 @@ if st.session_state["user"] is None:
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
             # Clear the URL query parameters to ensure single use of the code
-            st.set_query_params()
+            st.experimental_set_query_params()
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
