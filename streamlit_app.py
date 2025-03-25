@@ -116,7 +116,7 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-# Updated fetch_stats() uses LIKE with %% for literal percent signs.
+# When filtering, we use a LIKE clause to account for potential whitespace or case differences.
 def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
@@ -193,8 +193,24 @@ def fetch_servers():
         conn.close()
     return [row["server_name"] for row in rows if row["server_name"]]
 
-# Update uses the primary key 'id' for the update.
-def update_server_config(config):
+# New helper function: update players table with the new server name.
+def update_players_server_name(old_server, new_server):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            UPDATE players
+            SET server_name = %s
+            WHERE LOWER(TRIM(server_name)) = LOWER(TRIM(%s))
+            """
+            cursor.execute(query, (new_server, old_server))
+            conn.commit()
+    finally:
+        conn.close()
+
+# Update uses the primary key 'id' for the update in guild_configs.
+# Additionally, if the server name has changed, update players table.
+def update_server_config(new_config, old_server):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -209,16 +225,20 @@ def update_server_config(config):
             WHERE id = %s
             """
             cursor.execute(query, (
-                config["guild_name"],
-                config["server_name"],
-                config["nitrado_service_id"],
-                config["nitrado_token"],
-                config["alert_channel_id"],
-                config["admin_role_id"],
-                config["id"]
+                new_config["guild_name"],
+                new_config["server_name"],
+                new_config["nitrado_service_id"],
+                new_config["nitrado_token"],
+                new_config["alert_channel_id"],
+                new_config["admin_role_id"],
+                new_config["id"]
             ))
             conn.commit()
             st.success("Server configuration updated! Please refresh the page to see changes.")
+            # If the server name has changed, update the players table.
+            if new_config["server_name"].strip().lower() != old_server.strip().lower():
+                update_players_server_name(old_server, new_config["server_name"])
+                st.success("All player records updated with the new server name!")
     except pymysql.err.IntegrityError as e:
         if e.args[0] == 1062:
             st.error("Duplicate entry error: This server name already exists for this guild. Please choose a different server name.")
@@ -305,6 +325,8 @@ def server_management_page():
                 # Display the record's primary key (id)
                 st.text_input("Record ID", value=str(config["id"]), disabled=True)
                 guild_name = st.text_input("Guild Name", value=config["guild_name"])
+                # Save the old server name so we can update the players table if changed.
+                old_server = config["server_name"]
                 server_name = st.text_input("Server Name", value=config["server_name"])
                 nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
                 nitrado_token = st.text_input("Nitrado Token", value=config["nitrado_token"])
@@ -322,7 +344,7 @@ def server_management_page():
                         "alert_channel_id": alert_channel_id,
                         "admin_role_id": admin_role_id
                     }
-                    update_server_config(new_config)
+                    update_server_config(new_config, old_server)
                     st.write("Update complete. Please refresh the page to see updated information.")
         else:
             st.error("Could not fetch configuration for the selected server.")
