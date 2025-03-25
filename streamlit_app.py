@@ -50,15 +50,18 @@ def exchange_code_for_token(code):
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": DISCORD_REDIRECT_URI
-        # Remove the scope parameter from the token exchange request
     }
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json"
     }
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
-    response.raise_for_status()
+    if response.status_code != 200:
+        # Log the raw error details
+        st.error("Token exchange failed: " + response.text)
+        response.raise_for_status()
     return response.json()
+
 
 
 
