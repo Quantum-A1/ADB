@@ -16,7 +16,7 @@ if "code_exchanged" not in st.session_state:
 
 # Authentication via Discord OAuth.
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params  # Updated: use st.query_params instead of st.experimental_get_query_params
     if "code" in query_params:
         code_param = query_params["code"]
         code = code_param[0] if isinstance(code_param, list) else code_param
