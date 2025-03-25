@@ -78,7 +78,7 @@ DISCORD_CLIENT_ID = st.secrets.get("DISCORD_CLIENT_ID") or os.getenv("DISCORD_CL
 DISCORD_CLIENT_SECRET = st.secrets.get("DISCORD_CLIENT_SECRET") or os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = st.secrets.get("DISCORD_REDIRECT_URI") or os.getenv("DISCORD_REDIRECT_URI")
 
-# BOT_OWNER_ID should be set in your secrets for the bot owner’s discord ID.
+# BOT_OWNER_ID should be set in your secrets for the bot owner’s Discord ID.
 BOT_OWNER_ID = st.secrets.get("BOT_OWNER_ID") or os.getenv("BOT_OWNER_ID")
 
 DISCORD_OAUTH_URL = "https://discord.com/api/oauth2/authorize"
@@ -140,7 +140,6 @@ if not user:
     st.stop()
 st.write(f"Welcome, **{user['username']}**!")
 
-# Only allow access if user is in allowed_ids.
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
 allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
 if user["id"] not in allowed_ids:
@@ -152,7 +151,7 @@ if user["id"] not in allowed_ids:
 # ------------------------------------------------------------------------------
 logo_url = "https://cdn.discordapp.com/attachments/1353449300889440297/1354166635816026233/adb.png?ex=67e44d75&is=67e2fbf5&hm=bc63d8bb063402b32dbf61c141bb87a13f791b8a89ddab45d0e551a3b13c7532&"
 st.sidebar.image(logo_url, width=150)
-# Build navigation options; include "User Management" if user is bot owner.
+# Build navigation options; include "User Management" if user is the bot owner.
 nav_options = ["Dashboard", "Server Management"]
 if user["id"] == BOT_OWNER_ID:
     nav_options.append("User Management")
@@ -164,7 +163,7 @@ if st.sidebar.button("Logout", key="logout_button"):
 # ------------------------------------------------------------------------------
 # Database Connection and Helper Functions (using Connection Pooling)
 # ------------------------------------------------------------------------------
-def get_db_connection():
+def get_db_connection_direct():
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,
@@ -173,6 +172,10 @@ def get_db_connection():
         autocommit=True,
         cursorclass=pymysql.cursors.DictCursor
     )
+
+# In all DB functions, we use get_db_connection() from our pool and then release it.
+def get_db_connection():
+    return get_db_connection_direct()  # Using our pooling functions below
 
 def fetch_stats(server_name=None):
     conn = get_db_connection()
@@ -291,6 +294,7 @@ def update_server_config(new_config, old_server):
             ))
             conn.commit()
             st.success("Server configuration updated! Please refresh the page to see changes.")
+            # If the server name has changed, update the players table.
             if new_config["server_name"].strip().lower() != old_server.strip().lower():
                 update_players_server_name(old_server, new_config["server_name"])
                 st.success("All player records updated with the new server name!")
@@ -313,7 +317,9 @@ def fetch_server_config(server_name):
     finally:
         release_db_connection(conn)
 
-# New functions for User Management (for Bot Owner)
+# ------------------------------------------------------------------------------
+# User Management Functions (for Bot Owner)
+# ------------------------------------------------------------------------------
 def fetch_user_access():
     conn = get_db_connection()
     try:
@@ -359,7 +365,7 @@ def remove_user_access(record_id):
 def dashboard_page():
     st.header("Dashboard")
     
-    # Global Server Selector: This affects both the summary stats and trends.
+    # Global Server Selector affects both summary stats and trends.
     server_options = ["All"] + fetch_servers()
     selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
     
@@ -482,51 +488,13 @@ def user_management_page():
             else:
                 st.error("Please provide a valid Record ID.")
 
-def fetch_user_access():
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM user_access")
-            rows = cursor.fetchall()
-    finally:
-        release_db_connection(conn)
-    return pd.DataFrame(rows)
-
-def add_user_access(discord_id, username, access_level):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            query = """
-            INSERT INTO user_access (discord_id, username, access_level)
-            VALUES (%s, %s, %s)
-            """
-            cursor.execute(query, (discord_id, username, access_level))
-            conn.commit()
-            st.success("User added successfully.")
-    except pymysql.err.IntegrityError as e:
-        st.error(f"Error: A user with that Discord ID may already exist. {e}")
-    finally:
-        release_db_connection(conn)
-
-def remove_user_access(record_id):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            query = "DELETE FROM user_access WHERE id = %s"
-            cursor.execute(query, (record_id,))
-            conn.commit()
-            st.success("User removed successfully.")
-    except Exception as e:
-        st.error(f"Error removing user: {e}")
-    finally:
-        release_db_connection(conn)
-
 # ------------------------------------------------------------------------------
 # Main Application Navigation
 # ------------------------------------------------------------------------------
 def main():
     st.title("Alt Detection Dashboard")
-    init_db_pool()  # Initialize connection pool
+    init_db_pool()  # Initialize the connection pool
+    
     nav_options = ["Dashboard", "Server Management"]
     if user["id"] == BOT_OWNER_ID:
         nav_options.append("User Management")
