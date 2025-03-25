@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
-from common import get_db_connection, release_db_connection, fetch_servers, fetch_servers_for_user, fetch_server_config, update_server_config
+from common import (
+    get_db_connection,
+    release_db_connection,
+    fetch_servers,
+    fetch_servers_for_user,
+    fetch_server_config,
+    update_server_config
+)
 
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
@@ -14,12 +21,23 @@ else:
 st.header("Server Management")
 st.write("Below is a list of your server configurations:")
 
-# Display server configurations (read-only view for moderator/admin).
+# Display server configurations filtered by user permissions.
 conn = get_db_connection()
 try:
     with conn.cursor() as cursor:
-        cursor.execute("SELECT * FROM guild_configs")
-        server_configs = cursor.fetchall()
+        if access_level == "user":
+            if server_options:
+                placeholders = ','.join(['%s'] * len(server_options))
+                query = f"SELECT * FROM guild_configs WHERE server_name IN ({placeholders})"
+                cursor.execute(query, tuple(server_options))
+            else:
+                # If no servers are assigned, set an empty list.
+                server_configs = []
+        else:
+            cursor.execute("SELECT * FROM guild_configs")
+        # If server_configs isn't already set (in the 'user' case), fetch results.
+        if 'server_configs' not in locals():
+            server_configs = cursor.fetchall()
 finally:
     release_db_connection(conn)
 
