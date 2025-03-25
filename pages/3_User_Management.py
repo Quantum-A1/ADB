@@ -1,4 +1,3 @@
-# pages/3_User_Management.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,7 +8,10 @@ from common import (
     fetch_user_access,
     add_user_access,
     remove_user_by_discord_id,
-    update_user_access
+    update_user_access,
+    fetch_servers,                  # all available servers
+    assign_servers_to_user,         # new helper function (to be added in common.py)
+    get_assigned_servers_for_user   # new helper function (to be added in common.py)
 )
 
 user = st.session_state.get("user")
@@ -22,11 +24,10 @@ if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
 
 st.header("User Management")
 
-# Fetch current users.
+# --- User Stats Section (Metrics & Pie Chart) ---
 df_users = fetch_user_access()
 
 if not df_users.empty:
-    # Display user stats similar to Dashboard.
     access_counts = df_users["access_level"].value_counts().to_dict()
     total_users = len(df_users)
     user_count = access_counts.get("user", 0)
@@ -51,12 +52,14 @@ if not df_users.empty:
 else:
     st.write("No user access records found.")
 
+# --- Current Users Table ---
 st.subheader("Current Users")
 if not df_users.empty:
     st.dataframe(df_users)
 else:
     st.write("No user access records found.")
 
+# --- Add New User Section ---
 st.subheader("Add New User")
 with st.form("add_user_form", clear_on_submit=True):
     new_discord_id = st.text_input("Discord ID")
@@ -69,6 +72,7 @@ with st.form("add_user_form", clear_on_submit=True):
         else:
             st.error("Please provide both Discord ID and Username.")
 
+# --- Edit User Section ---
 st.subheader("Edit User")
 with st.form("edit_user_form", clear_on_submit=True):
     edit_discord_id = st.text_input("Discord ID of User to Edit")
@@ -81,6 +85,7 @@ with st.form("edit_user_form", clear_on_submit=True):
         else:
             st.error("Please provide the Discord ID and new username.")
 
+# --- Remove User Section ---
 st.subheader("Remove User")
 with st.form("remove_user_form", clear_on_submit=True):
     remove_discord_id = st.text_input("Discord ID to Remove")
@@ -88,5 +93,22 @@ with st.form("remove_user_form", clear_on_submit=True):
     if remove_submitted:
         if remove_discord_id:
             remove_user_by_discord_id(remove_discord_id)
+        else:
+            st.error("Please provide a valid Discord ID.")
+
+# --- Assign Servers Section ---
+# This section allows an admin (or higher) to assign which servers a user with "user" permission can see.
+st.subheader("Assign Servers to User")
+with st.form("assign_servers_form", clear_on_submit=True):
+    assign_discord_id = st.text_input("Discord ID of User to Assign Servers")
+    # Fetch all available servers using fetch_servers
+    all_servers = fetch_servers()
+    # Optionally, pre-load current assignments if you wish:
+    # current_assignments = get_assigned_servers_for_user(assign_discord_id) if assign_discord_id else []
+    selected_servers = st.multiselect("Select Servers", options=all_servers)
+    assign_submitted = st.form_submit_button("Update Server Assignments")
+    if assign_submitted:
+        if assign_discord_id:
+            assign_servers_to_user(assign_discord_id, selected_servers)
         else:
             st.error("Please provide a valid Discord ID.")
