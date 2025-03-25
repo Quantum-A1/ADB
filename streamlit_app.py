@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 import requests
 from urllib.parse import urlencode
+import plotly.express as px
 
 # ------------------------------------------------------------------------------
 # Authentication via Discord OAuth
@@ -14,7 +15,7 @@ from urllib.parse import urlencode
 if not st.secrets:
     load_dotenv()
 
-# Initialize session state for user if not already set
+# Initialize session state variables if not already set
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "code_exchanged" not in st.session_state:
@@ -69,7 +70,7 @@ def fetch_user_info(access_token):
     response.raise_for_status()
     return response.json()
 
-# Process OAuth code only if user info is not set and we haven't already processed a code
+# Process OAuth code if user is not logged in and the code has not been processed
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
     query_params = st.query_params
     if "code" in query_params:
@@ -91,7 +92,7 @@ if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
         login_with_discord()
         st.stop()
 
-# Use safe retrieval for user info before proceeding
+# Safe retrieval for user info
 user = st.session_state.get("user")
 if not user:
     st.error("User information is missing. Please log in.")
@@ -107,7 +108,10 @@ if user["id"] not in allowed_ids:
     st.error("Access Denied: You are not authorized to view this dashboard.")
     st.stop()
 
-# Add a Logout button in the sidebar
+# ------------------------------------------------------------------------------
+# Sidebar Navigation and Logout
+# ------------------------------------------------------------------------------
+page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
 if st.sidebar.button("Logout"):
     st.session_state.pop("user", None)
     st.experimental_rerun()
@@ -130,7 +134,6 @@ def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Total players
             total_query = "SELECT COUNT(*) AS total_players FROM players"
             if server_name and server_name != "All":
                 total_query += " WHERE server_name = %s"
@@ -139,7 +142,6 @@ def fetch_stats(server_name=None):
                 cursor.execute(total_query)
             total_players = cursor.fetchone()["total_players"]
 
-            # Flagged accounts
             flagged_query = "SELECT COUNT(*) AS flagged_accounts FROM players WHERE alt_flag = TRUE"
             if server_name and server_name != "All":
                 flagged_query += " AND server_name = %s"
@@ -148,7 +150,6 @@ def fetch_stats(server_name=None):
                 cursor.execute(flagged_query)
             flagged_accounts = cursor.fetchone()["flagged_accounts"]
 
-            # Watchlisted accounts
             watchlisted_query = "SELECT COUNT(*) AS watchlisted_accounts FROM players WHERE watchlisted = TRUE"
             if server_name and server_name != "All":
                 watchlisted_query += " AND server_name = %s"
@@ -157,7 +158,6 @@ def fetch_stats(server_name=None):
                 cursor.execute(watchlisted_query)
             watchlisted_accounts = cursor.fetchone()["watchlisted_accounts"]
 
-            # Whitelisted accounts
             whitelisted_query = "SELECT COUNT(*) AS whitelisted_accounts FROM players WHERE whitelist = TRUE"
             if server_name and server_name != "All":
                 whitelisted_query += " AND server_name = %s"
@@ -204,57 +204,76 @@ def fetch_servers():
             rows = cursor.fetchall()
     finally:
         conn.close()
-    # Return a list of server names, filtering out any empty strings
     return [row["server_name"] for row in rows if row["server_name"]]
 
-def update_guild_config(guild_id, new_server_name):
+def update_server_config(config):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Check if the record with this guild_id already has the new server name
-            cursor.execute(
-                "SELECT COUNT(*) AS count FROM guild_configs WHERE guild_id = %s AND server_name = %s",
-                (guild_id, new_server_name)
-            )
-            result = cursor.fetchone()
-            if result["count"] > 0:
-                st.warning("The configuration already has that server name. No changes made.")
-                return
-            # Otherwise, update the row for that guild_id
-            cursor.execute(
-                "UPDATE guild_configs SET server_name = %s WHERE guild_id = %s",
-                (new_server_name, guild_id)
-            )
+            query = """
+            UPDATE guild_configs SET 
+                guild_name = %s, 
+                server_name = %s, 
+                nitrado_service_id = %s, 
+                nitrado_token = %s, 
+                alert_channel_id = %s, 
+                admin_role_id = %s 
+            WHERE guild_id = %s
+            """
+            cursor.execute(query, (
+                config["guild_name"],
+                config["server_name"],
+                config["nitrado_service_id"],
+                config["nitrado_token"],
+                config["alert_channel_id"],
+                config["admin_role_id"],
+                config["guild_id"]
+            ))
             conn.commit()
-            st.success("Guild configuration updated!")
+            st.success("Server configuration updated!")
     except Exception as e:
         st.error(f"Error updating config: {e}")
     finally:
         conn.close()
 
+def fetch_server_config(server_name):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM guild_configs WHERE server_name = %s", (server_name,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
 # ------------------------------------------------------------------------------
-# Main Dashboard Layout
+# Dashboard Page (Global Stats & Trends)
 # ------------------------------------------------------------------------------
-
-def main():
-    st.title("Alt Detection Dashboard")
-
-    # Dropdown for selecting server view
-    server_options = ["All"] + fetch_servers()
-    selected_server = st.selectbox("Select Server", options=server_options)
-
-    # Combined view: Bar chart for Summary Statistics
-    stats = fetch_stats(selected_server)
+def dashboard_page():
+    st.header("Dashboard")
+    
+    # Show top metrics as numbers
+    stats = fetch_stats()
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Players", stats["total_players"])
+    col2.metric("Flagged Accounts", stats["flagged_accounts"])
+    col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
+    col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+    
+    # Prepare data for pie chart (summary stats)
     summary_df = pd.DataFrame({
         "Metric": ["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
         "Value": [stats["total_players"], stats["flagged_accounts"],
                   stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
     })
-    st.header("Combined Summary Statistics")
-    st.bar_chart(summary_df.set_index("Metric"))
-
-    # Alt Detection Trends Section
+    st.subheader("Summary Statistics Distribution")
+    fig = px.pie(summary_df, values="Value", names="Metric", title="Summary Distribution")
+    st.plotly_chart(fig)
+    
+    # Alt Detection Trends
     st.header("Alt Detection Trends")
+    # Optionally filter by server using a dropdown
+    server_options = ["All"] + fetch_servers()
+    selected_server = st.selectbox("Select Server (for trends)", options=server_options)
     df_trend = fetch_trend_data(selected_server)
     if not df_trend.empty:
         df_trend['date'] = pd.to_datetime(df_trend['date'])
@@ -263,17 +282,71 @@ def main():
     else:
         st.write("No trend data available")
 
-    # Guild Configuration Management Section
-    st.header("Manage Guild Configurations")
-    with st.form("guild_config_form"):
-        guild_id = st.text_input("Guild ID", help="Enter the guild ID")
-        new_server_name = st.text_input("New Server Name", help="Enter the new server name")
-        submitted = st.form_submit_button("Update Configuration")
-        if submitted:
-            if guild_id and new_server_name:
-                update_guild_config(guild_id, new_server_name)
-            else:
-                st.error("Please provide both Guild ID and New Server Name.")
+# ------------------------------------------------------------------------------
+# Server Management Page (Manage/Edit Server Configurations)
+# ------------------------------------------------------------------------------
+def server_management_page():
+    st.header("Server Management")
+    st.write("Below is a list of all server configurations:")
+    # Fetch all server configs into a DataFrame for display
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM guild_configs")
+            server_configs = cursor.fetchall()
+    finally:
+        conn.close()
+    if server_configs:
+        df_configs = pd.DataFrame(server_configs)
+        st.dataframe(df_configs)
+    else:
+        st.write("No server configurations found.")
+    
+    st.subheader("Edit Server Configuration")
+    # Dropdown to select a server by name
+    server_options = fetch_servers()
+    if server_options:
+        selected_server = st.selectbox("Select a server to edit", options=server_options)
+        config = fetch_server_config(selected_server)
+        if config:
+            with st.form("edit_server_config_form"):
+                guild_id = st.text_input("Guild ID", value=str(config["guild_id"]), disabled=True)
+                guild_name = st.text_input("Guild Name", value=config["guild_name"])
+                server_name = st.text_input("Server Name", value=config["server_name"])
+                nitrado_service_id = st.text_input("Nitrado Service ID", value=config["nitrado_service_id"])
+                nitrado_token = st.text_input("Nitrado Token", value=config["nitrado_token"])
+                alert_channel_id = st.text_input("Alert Channel ID", value=str(config["alert_channel_id"]))
+                admin_role_id = st.text_input("Admin Role ID", value=str(config["admin_role_id"]))
+                submitted = st.form_submit_button("Save Changes")
+                if submitted:
+                    new_config = {
+                        "guild_id": config["guild_id"],
+                        "guild_name": guild_name,
+                        "server_name": server_name,
+                        "nitrado_service_id": nitrado_service_id,
+                        "nitrado_token": nitrado_token,
+                        "alert_channel_id": alert_channel_id,
+                        "admin_role_id": admin_role_id
+                    }
+                    update_server_config(new_config)
+                    st.experimental_rerun()
+        else:
+            st.error("Could not fetch configuration for the selected server.")
+    else:
+        st.write("No servers found to edit.")
+
+# ------------------------------------------------------------------------------
+# Main Application Navigation
+# ------------------------------------------------------------------------------
+def main():
+    st.title("Alt Detection Dashboard")
+    # Sidebar navigation already exists (see earlier section)
+    page = st.sidebar.radio("Navigation", ["Dashboard", "Server Management"])
+    
+    if page == "Dashboard":
+        dashboard_page()
+    elif page == "Server Management":
+        server_management_page()
 
 if __name__ == '__main__':
     main()
