@@ -81,6 +81,15 @@ if "user" not in st.session_state:
 st.write(f"Welcome, **{st.session_state['user']['username']}**!")
 
 # ------------------------------------------------------------------------------
+# User Management: Allow only specific Discord users to access the dashboard
+# ------------------------------------------------------------------------------
+allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
+allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
+if st.session_state["user"]["id"] not in allowed_ids:
+    st.error("Access Denied: You are not authorized to view this dashboard.")
+    st.stop()
+
+# ------------------------------------------------------------------------------
 # Database Connection and Helper Functions
 # ------------------------------------------------------------------------------
 
