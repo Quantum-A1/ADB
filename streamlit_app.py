@@ -17,13 +17,23 @@ if not st.secrets:
     load_dotenv()
 
 # --- Theme Toggle ---
+# Theme Toggle snippet to place at the top of your main file:
 theme_choice = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0)
 if theme_choice == "Dark":
     st.markdown(
         """
         <style>
-        .main { background-color: #262730; color: #FFF; }
-        .sidebar .sidebar-content { background-color: #333; }
+        :root {
+            --background-color: #262730;
+            --text-color: #FFF;
+        }
+        [data-testid="stAppViewContainer"] {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        [data-testid="stSidebar"] {
+            background-color: #333;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -32,12 +42,22 @@ else:
     st.markdown(
         """
         <style>
-        .main { background-color: #FFF; color: #000; }
-        .sidebar .sidebar-content { background-color: #f0f2f6; }
+        :root {
+            --background-color: #FFF;
+            --text-color: #000;
+        }
+        [data-testid="stAppViewContainer"] {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        [data-testid="stSidebar"] {
+            background-color: #f0f2f6;
+        }
         </style>
         """,
         unsafe_allow_html=True
     )
+
 
 # Initialize session state for authentication.
 if "user" not in st.session_state:
