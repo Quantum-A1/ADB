@@ -71,20 +71,18 @@ def fetch_user_info(access_token):
 
 # Process OAuth code only if user info is not set and we haven't already processed a code
 if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
-    query_params = st.query_params  # Updated API call
-    st.write("Query parameters:", query_params)  # Debug: remove in production if needed
+    query_params = st.query_params
     if "code" in query_params:
         code_param = query_params["code"]
         if isinstance(code_param, list):
             code = code_param[0]
         else:
             code = code_param
-        st.write("Received code:", code)  # Debug: remove in production if needed
         try:
             token_data = exchange_code_for_token(code)
             user_info = fetch_user_info(token_data["access_token"])
             st.session_state["user"] = user_info
-            st.session_state["code_exchanged"] = True  # Mark that we have processed the code
+            st.session_state["code_exchanged"] = True
         except Exception as e:
             st.error(f"Authentication failed: {e}")
             st.stop()
@@ -93,12 +91,11 @@ if st.session_state["user"] is None and not st.session_state["code_exchanged"]:
         login_with_discord()
         st.stop()
 
-# Ensure user info is set before proceeding
+# Use safe retrieval for user info before proceeding
 user = st.session_state.get("user")
 if not user:
     st.error("User information is missing. Please log in.")
     st.stop()
-
 st.write(f"Welcome, **{user['username']}**!")
 
 # ------------------------------------------------------------------------------
@@ -109,6 +106,11 @@ allowed_ids = [uid.strip() for uid in allowed_ids if uid.strip()]
 if user["id"] not in allowed_ids:
     st.error("Access Denied: You are not authorized to view this dashboard.")
     st.stop()
+
+# Add a Logout button in the sidebar
+if st.sidebar.button("Logout"):
+    st.session_state.pop("user", None)
+    st.experimental_rerun()
 
 # ------------------------------------------------------------------------------
 # Database Connection and Helper Functions
@@ -124,20 +126,44 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-def fetch_stats():
+def fetch_stats(server_name=None):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) AS total_players FROM players")
+            # Total players
+            total_query = "SELECT COUNT(*) AS total_players FROM players"
+            if server_name and server_name != "All":
+                total_query += " WHERE server_name = %s"
+                cursor.execute(total_query, (server_name,))
+            else:
+                cursor.execute(total_query)
             total_players = cursor.fetchone()["total_players"]
 
-            cursor.execute("SELECT COUNT(*) AS flagged_accounts FROM players WHERE alt_flag = TRUE")
+            # Flagged accounts
+            flagged_query = "SELECT COUNT(*) AS flagged_accounts FROM players WHERE alt_flag = TRUE"
+            if server_name and server_name != "All":
+                flagged_query += " AND server_name = %s"
+                cursor.execute(flagged_query, (server_name,))
+            else:
+                cursor.execute(flagged_query)
             flagged_accounts = cursor.fetchone()["flagged_accounts"]
 
-            cursor.execute("SELECT COUNT(*) AS watchlisted_accounts FROM players WHERE watchlisted = TRUE")
+            # Watchlisted accounts
+            watchlisted_query = "SELECT COUNT(*) AS watchlisted_accounts FROM players WHERE watchlisted = TRUE"
+            if server_name and server_name != "All":
+                watchlisted_query += " AND server_name = %s"
+                cursor.execute(watchlisted_query, (server_name,))
+            else:
+                cursor.execute(watchlisted_query)
             watchlisted_accounts = cursor.fetchone()["watchlisted_accounts"]
 
-            cursor.execute("SELECT COUNT(*) AS whitelisted_accounts FROM players WHERE whitelist = TRUE")
+            # Whitelisted accounts
+            whitelisted_query = "SELECT COUNT(*) AS whitelisted_accounts FROM players WHERE whitelist = TRUE"
+            if server_name and server_name != "All":
+                whitelisted_query += " AND server_name = %s"
+                cursor.execute(whitelisted_query, (server_name,))
+            else:
+                cursor.execute(whitelisted_query)
             whitelisted_accounts = cursor.fetchone()["whitelisted_accounts"]
     finally:
         conn.close()
@@ -149,30 +175,58 @@ def fetch_stats():
         "whitelisted_accounts": whitelisted_accounts
     }
 
-def fetch_trend_data():
+def fetch_trend_data(server_name=None):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
+            base_query = """
                 SELECT DATE(timestamp) AS date, COUNT(*) AS count
                 FROM player_history
-                GROUP BY DATE(timestamp)
-                ORDER BY date ASC
-            """)
+            """
+            if server_name and server_name != "All":
+                base_query += " WHERE server_name = %s"
+                base_query += " GROUP BY DATE(timestamp) ORDER BY date ASC"
+                cursor.execute(base_query, (server_name,))
+            else:
+                base_query += " GROUP BY DATE(timestamp) ORDER BY date ASC"
+                cursor.execute(base_query)
             rows = cursor.fetchall()
     finally:
         conn.close()
 
     return pd.DataFrame(rows)
 
+def fetch_servers():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT server_name FROM guild_configs")
+            rows = cursor.fetchall()
+    finally:
+        conn.close()
+    # Return a list of server names, filtering out any empty strings
+    return [row["server_name"] for row in rows if row["server_name"]]
+
 def update_guild_config(guild_id, new_server_name):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                UPDATE guild_configs SET server_name = %s WHERE guild_id = %s
-            """, (new_server_name, guild_id))
+            # Check if the record with this guild_id already has the new server name
+            cursor.execute(
+                "SELECT COUNT(*) AS count FROM guild_configs WHERE guild_id = %s AND server_name = %s",
+                (guild_id, new_server_name)
+            )
+            result = cursor.fetchone()
+            if result["count"] > 0:
+                st.warning("The configuration already has that server name. No changes made.")
+                return
+            # Otherwise, update the row for that guild_id
+            cursor.execute(
+                "UPDATE guild_configs SET server_name = %s WHERE guild_id = %s",
+                (new_server_name, guild_id)
+            )
             conn.commit()
+            st.success("Guild configuration updated!")
     except Exception as e:
         st.error(f"Error updating config: {e}")
     finally:
@@ -185,18 +239,23 @@ def update_guild_config(guild_id, new_server_name):
 def main():
     st.title("Alt Detection Dashboard")
 
-    # Summary Statistics Section
-    st.header("Summary Statistics")
-    stats = fetch_stats()
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Players", stats["total_players"])
-    col2.metric("Flagged Accounts", stats["flagged_accounts"])
-    col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
-    col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+    # Dropdown for selecting server view
+    server_options = ["All"] + fetch_servers()
+    selected_server = st.selectbox("Select Server", options=server_options)
+
+    # Combined view: Bar chart for Summary Statistics
+    stats = fetch_stats(selected_server)
+    summary_df = pd.DataFrame({
+        "Metric": ["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
+        "Value": [stats["total_players"], stats["flagged_accounts"],
+                  stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
+    })
+    st.header("Combined Summary Statistics")
+    st.bar_chart(summary_df.set_index("Metric"))
 
     # Alt Detection Trends Section
     st.header("Alt Detection Trends")
-    df_trend = fetch_trend_data()
+    df_trend = fetch_trend_data(selected_server)
     if not df_trend.empty:
         df_trend['date'] = pd.to_datetime(df_trend['date'])
         df_trend.set_index('date', inplace=True)
@@ -213,7 +272,6 @@ def main():
         if submitted:
             if guild_id and new_server_name:
                 update_guild_config(guild_id, new_server_name)
-                st.success("Guild configuration updated!")
             else:
                 st.error("Please provide both Guild ID and New Server Name.")
 
