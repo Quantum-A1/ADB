@@ -50,6 +50,9 @@ if not df_accounts.empty:
     if filter_multiple:
         df_accounts = df_accounts[df_accounts["multiple_devices"] == True]
 
+    # Sort by ID in ascending order
+    df_accounts = df_accounts.sort_values(by="id", ascending=True)
+
 # Display the filtered accounts table
 if not df_accounts.empty:
     st.dataframe(df_accounts)
