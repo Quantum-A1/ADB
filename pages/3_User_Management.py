@@ -15,8 +15,6 @@ from common import (
     get_assigned_servers_for_user   # new helper function
 )
 
-
-
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
@@ -58,7 +56,6 @@ else:
 # --- Current Users Table with Assigned Servers ---
 st.subheader("Current Users")
 if not df_users.empty:
-    # Add a new column with assigned servers
     def get_assigned(d_id):
         servers = get_assigned_servers_for_user(d_id)
         return ", ".join(servers) if servers else "None"
@@ -80,18 +77,32 @@ with st.form("add_user_form", clear_on_submit=True):
         else:
             st.error("Please provide both Discord ID and Username.")
 
-# --- Edit User Section ---
+# --- Edit User Section with Dropdown ---
 st.subheader("Edit User")
-with st.form("edit_user_form", clear_on_submit=True):
-    edit_discord_id = st.text_input("Discord ID of User to Edit")
-    new_username = st.text_input("New Username")
-    new_access = st.selectbox("New Access Level", options=["user", "moderator", "admin", "super-admin"], index=0)
-    edit_submitted = st.form_submit_button("Update User")
-    if edit_submitted:
-        if edit_discord_id and new_username:
-            update_user_access(edit_discord_id, new_username, new_access)
-        else:
-            st.error("Please provide the Discord ID and new username.")
+if not df_users.empty:
+    # Create a dropdown list of users using discord_id as the value and "username (discord_id)" as display text.
+    user_options = df_users.apply(lambda row: (row["discord_id"], f"{row['username']} ({row['discord_id']})"), axis=1).tolist()
+    selected_discord_id = st.selectbox(
+        "Select a user to edit",
+        options=[opt[0] for opt in user_options],
+        format_func=lambda x: next((opt[1] for opt in user_options if opt[0] == x), x)
+    )
+    # Get the selected user's record.
+    selected_user_record = df_users[df_users["discord_id"] == selected_discord_id].iloc[0]
+    with st.form("edit_user_form", clear_on_submit=True):
+        st.text_input("Discord ID", value=selected_user_record["discord_id"], disabled=True)
+        new_username = st.text_input("Username", value=selected_user_record["username"])
+        current_access = selected_user_record.get("access_level", "user")
+        new_access = st.selectbox(
+            "Access Level",
+            options=["user", "moderator", "admin", "super-admin"],
+            index=["user", "moderator", "admin", "super-admin"].index(current_access)
+        )
+        edit_submitted = st.form_submit_button("Update User")
+        if edit_submitted:
+            update_user_access(selected_discord_id, new_username, new_access)
+else:
+    st.write("No user records to edit.")
 
 # --- Remove User Section ---
 st.subheader("Remove User")
@@ -105,11 +116,9 @@ with st.form("remove_user_form", clear_on_submit=True):
             st.error("Please provide a valid Discord ID.")
 
 # --- Assign Servers Section ---
-# This section allows an admin (or higher) to assign which servers a user with "user" permission can see.
 st.subheader("Assign Servers to User")
 with st.form("assign_servers_form", clear_on_submit=True):
     assign_discord_id = st.text_input("Discord ID of User to Assign Servers")
-    # Fetch all available servers using fetch_servers
     all_servers = fetch_servers()
     selected_servers = st.multiselect("Select Servers", options=all_servers)
     assign_submitted = st.form_submit_button("Update Server Assignments")
