@@ -11,8 +11,8 @@ from common import (
     remove_user_by_discord_id,
     update_user_access,
     fetch_servers,                  # all available servers
-    assign_servers_to_user,         # new helper function
-    get_assigned_servers_for_user   # new helper function
+    assign_servers_to_user,         # helper function to assign servers
+    get_assigned_servers_for_user   # helper function to get assigned servers
 )
 
 user = st.session_state.get("user")
@@ -77,7 +77,7 @@ with st.form("add_user_form", clear_on_submit=True):
         else:
             st.error("Please provide both Discord ID and Username.")
 
-# --- Edit User Section with Dropdown ---
+# --- Unified Edit User Section ---
 st.subheader("Edit User")
 if not df_users.empty:
     # Create a dropdown list of users using discord_id as the value and "username (discord_id)" as display text.
@@ -89,6 +89,9 @@ if not df_users.empty:
     )
     # Get the selected user's record.
     selected_user_record = df_users[df_users["discord_id"] == selected_discord_id].iloc[0]
+    # Pre-load assigned servers for this user.
+    current_assigned_servers = get_assigned_servers_for_user(selected_discord_id)
+    
     with st.form("edit_user_form", clear_on_submit=True):
         st.text_input("Discord ID", value=selected_user_record["discord_id"], disabled=True)
         new_username = st.text_input("Username", value=selected_user_record["username"])
@@ -98,32 +101,24 @@ if not df_users.empty:
             options=["user", "moderator", "admin", "super-admin"],
             index=["user", "moderator", "admin", "super-admin"].index(current_access)
         )
-        edit_submitted = st.form_submit_button("Update User")
-        if edit_submitted:
+        new_assigned_servers = st.multiselect(
+            "Assigned Servers",
+            options=fetch_servers(),  # all available servers
+            default=current_assigned_servers
+        )
+        col1, col2, col3 = st.columns(3)
+        update_button = col1.form_submit_button("Update User Info")
+        remove_button = col2.form_submit_button("Remove User")
+        update_servers_button = col3.form_submit_button("Update Server Assignments")
+        
+        if update_button:
             update_user_access(selected_discord_id, new_username, new_access)
+            st.success("User information updated successfully.")
+        if remove_button:
+            remove_user_by_discord_id(selected_discord_id)
+            st.success("User removed successfully.")
+        if update_servers_button:
+            assign_servers_to_user(selected_discord_id, new_assigned_servers)
+            st.success("Server assignments updated successfully.")
 else:
     st.write("No user records to edit.")
-
-# --- Remove User Section ---
-st.subheader("Remove User")
-with st.form("remove_user_form", clear_on_submit=True):
-    remove_discord_id = st.text_input("Discord ID to Remove")
-    remove_submitted = st.form_submit_button("Remove User")
-    if remove_submitted:
-        if remove_discord_id:
-            remove_user_by_discord_id(remove_discord_id)
-        else:
-            st.error("Please provide a valid Discord ID.")
-
-# --- Assign Servers Section ---
-st.subheader("Assign Servers to User")
-with st.form("assign_servers_form", clear_on_submit=True):
-    assign_discord_id = st.text_input("Discord ID of User to Assign Servers")
-    all_servers = fetch_servers()
-    selected_servers = st.multiselect("Select Servers", options=all_servers)
-    assign_submitted = st.form_submit_button("Update Server Assignments")
-    if assign_submitted:
-        if assign_discord_id:
-            assign_servers_to_user(assign_discord_id, selected_servers)
-        else:
-            st.error("Please provide a valid Discord ID.")
