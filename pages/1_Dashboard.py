@@ -3,15 +3,12 @@ import pandas as pd
 import plotly.express as px
 from common import fetch_stats, fetch_trend_data, fetch_servers, fetch_servers_for_user
 
-
-
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
 # For regular users, display only assigned servers.
 # For any user with admin-level permissions or higher, show all servers.
 if access_level == "user":
-    # fetch_servers_for_user should return only the servers assigned to user["id"]
     server_options = ["All"] + fetch_servers_for_user(user["id"])
 else:
     server_options = ["All"] + fetch_servers()
@@ -20,8 +17,20 @@ st.header("Dashboard")
 st.sidebar.subheader("Customize Dashboard")
 selected_metrics = st.sidebar.multiselect(
     "Select metrics to display",
-    options=["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
-    default=["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"]
+    options=[
+        "Total Players", 
+        "Flagged Accounts", 
+        "Watchlisted Accounts", 
+        "Whitelisted Accounts",
+        "Multi Device Accounts"  # New metric option
+    ],
+    default=[
+        "Total Players", 
+        "Flagged Accounts", 
+        "Watchlisted Accounts", 
+        "Whitelisted Accounts",
+        "Multi Device Accounts"  # Include by default if desired
+    ]
 )
 
 selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
@@ -40,12 +49,23 @@ for idx, metric in enumerate(selected_metrics):
         columns[idx].metric("Watchlisted Accounts", stats["watchlisted_accounts"])
     elif metric == "Whitelisted Accounts":
         columns[idx].metric("Whitelisted Accounts", stats["whitelisted_accounts"])
-
+    elif metric == "Multi Device Accounts":
+        columns[idx].metric("Multi Device Accounts", stats.get("multi_devices", 0))
 
 # Pie chart and trends.
 summary_df = pd.DataFrame({
-    "Metric": ["Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
-    "Value": [stats["flagged_accounts"], stats["watchlisted_accounts"], stats["whitelisted_accounts"]]
+    "Metric": [
+        "Flagged Accounts", 
+        "Watchlisted Accounts", 
+        "Whitelisted Accounts",
+        "Multi Device Accounts"
+    ],
+    "Value": [
+        stats["flagged_accounts"], 
+        stats["watchlisted_accounts"], 
+        stats["whitelisted_accounts"],
+        stats.get("multi_devices", 0)
+    ]
 })
 st.subheader("Summary Statistics Distribution")
 fig = px.pie(summary_df, values="Value", names="Metric", title="Summary Distribution")

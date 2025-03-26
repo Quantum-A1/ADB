@@ -150,6 +150,15 @@ def fetch_stats(server_name=None):
             else:
                 cursor.execute(whitelisted_query)
             whitelisted_accounts = cursor.fetchone()["whitelisted_accounts"]
+
+            # New: Query to count accounts using multiple devices.
+            multi_query = "SELECT COUNT(*) AS multi_devices FROM players WHERE multi_devices = TRUE"
+            if server_name and server_name != "All":
+                multi_query += " AND LOWER(TRIM(server_name)) LIKE CONCAT('%%', LOWER(TRIM(%s)), '%%')"
+                cursor.execute(multi_query, (server_name,))
+            else:
+                cursor.execute(multi_query)
+            multi_devices = cursor.fetchone()["multi_devices"]
     finally:
         release_db_connection(conn)
 
@@ -157,8 +166,10 @@ def fetch_stats(server_name=None):
         "total_players": total_players,
         "flagged_accounts": flagged_accounts,
         "watchlisted_accounts": watchlisted_accounts,
-        "whitelisted_accounts": whitelisted_accounts
+        "whitelisted_accounts": whitelisted_accounts,
+        "multi_devices": multi_devices
     }
+
 
 def fetch_trend_data(server_name=None):
     conn = get_db_connection()
@@ -468,24 +479,25 @@ def fetch_all_accounts():
         release_db_connection(conn)
     return rows
 
-def update_account_details(account_id, new_username, alt_flag, watchlisted, whitelist, multi_devices):
-    """Updates account details in the players table."""
+def update_account_details(account_id, new_gamertag, alt_flag, watchlisted, whitelist, multi_devices):
+    """Updates account details in the players table using the 'gamertag' column."""
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             query = """
                 UPDATE players
-                SET username = %s,
+                SET gamertag = %s,
                     alt_flag = %s,
                     watchlisted = %s,
                     whitelist = %s,
                     multi_devices = %s
                 WHERE id = %s
             """
-            cursor.execute(query, (new_username, alt_flag, watchlisted, whitelist, multi_devices, account_id))
+            cursor.execute(query, (new_gamertag, alt_flag, watchlisted, whitelist, multi_devices, account_id))
             conn.commit()
     finally:
         release_db_connection(conn)
+
         
 def fetch_main_account_by_device(device_id):
     """Fetch the main account (without an alt flag) for a given device_id."""

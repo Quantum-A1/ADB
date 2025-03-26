@@ -68,16 +68,26 @@ if alt_accounts:
 
     # Display groups for the current page
     for device_id in device_ids[start_index:end_index]:
+        st.write(f"**Device ID:** {device_id}")
         # Get the main account (account with the same device_id and alt_flag False)
         main_account = fetch_main_account_by_device(device_id)
         if main_account:
-            st.write(f"**Main Account:** {main_account.get('gamertag', 'N/A')} - Server: {main_account.get('server_name', 'N/A')}")
+            st.write("**Main Account:**")
+            st.write(f"Gamertag: {main_account.get('gamertag', 'N/A')}")
+            st.write(f"Server: {main_account.get('server_name', 'N/A')}")
+            st.write(f"First Seen: {main_account.get('first_seen', 'N/A')}")
+            st.write(f"Last Seen: {main_account.get('last_seen', 'N/A')}")
+            st.write(f"Gamertag ID: {main_account.get('gamertag_id', 'N/A')}")
         else:
             st.write("**Main Account:** Not found for device_id " + str(device_id))
         
-        # List the alt accounts in this group
+        st.write("**Alt Accounts:**")
         for alt in device_groups[device_id]:
-            st.write(f"   - **Alt Account:** {alt.get('gamertag', 'N/A')} - Server: {alt.get('server_name', 'N/A')}")
+            st.write(f"- Gamertag: {alt.get('gamertag', 'N/A')}")
+            st.write(f"  Server: {alt.get('server_name', 'N/A')}")
+            st.write(f"  First Seen: {alt.get('first_seen', 'N/A')}")
+            st.write(f"  Last Seen: {alt.get('last_seen', 'N/A')}")
+            st.write(f"  Gamertag ID: {alt.get('gamertag_id', 'N/A')}")
         st.write("---")
 else:
     st.write("No alt accounts detected.")
