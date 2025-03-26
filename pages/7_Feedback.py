@@ -18,9 +18,9 @@ with st.form("feedback_form", clear_on_submit=True):
         else:
             st.error("Please fill out both the subject and message.")
 
-# Optionally display feedback to support/admin users
+# Optionally display feedback to support/moderator/admin users
 user = st.session_state.get("user")
-if user and user.get("access_level") in ["admin", "super-admin"]:
+if user and user.get("access_level") in ["moderator", "admin", "super-admin"]:
     st.subheader("Submitted Feedback")
     feedback_list = fetch_feedback()
     if feedback_list:

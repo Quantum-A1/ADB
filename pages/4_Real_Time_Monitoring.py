@@ -15,7 +15,7 @@ from common import (
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
-st.header("Real-Time Monitoring & Alerts")
+st.header("📊 Real-Time Monitoring & Alerts")
 
 # Auto-refresh every 60 seconds
 st_autorefresh(interval=60000, key="real_time_monitor")
@@ -33,10 +33,11 @@ stats = fetch_stats(selected_server)
 
 # Display metrics
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Players", stats["total_players"])
-col2.metric("Flagged Accounts", stats["flagged_accounts"])
-col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
-col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+col1.metric("👤 Total Players", stats["total_players"])
+col2.metric("🚩 Flagged Accounts", stats["flagged_accounts"])
+col3.metric("👀 Watchlisted Accounts", stats["watchlisted_accounts"])
+col4.metric("🛡️ Whitelisted Accounts", stats["whitelisted_accounts"])
+col5.metric("🛡️ Multi Device Accounts", stats["multiple_devices"])
 
 # Trigger an alert if flagged accounts exceed a threshold (example: 50)
 if stats["flagged_accounts"] > 50:

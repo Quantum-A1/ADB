@@ -42,15 +42,15 @@ num_metrics = len(selected_metrics)
 columns = st.columns(num_metrics)
 for idx, metric in enumerate(selected_metrics):
     if metric == "Total Players":
-        columns[idx].metric("Total Players", stats["total_players"])
+        columns[idx].metric("👤 Total Players", stats["total_players"])
     elif metric == "Flagged Accounts":
-        columns[idx].metric("Flagged Accounts", stats["flagged_accounts"])
+        columns[idx].metric("🚩 Flagged Accounts", stats["flagged_accounts"])
     elif metric == "Watchlisted Accounts":
-        columns[idx].metric("Watchlisted Accounts", stats["watchlisted_accounts"])
+        columns[idx].metric("👀 Watchlisted Accounts", stats["watchlisted_accounts"])
     elif metric == "Whitelisted Accounts":
-        columns[idx].metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+        columns[idx].metric("🛡️ Whitelisted Accounts", stats["whitelisted_accounts"])
     elif metric == "Multi Device Accounts":
-        columns[idx].metric("Multi Device Accounts", stats.get("multiple_devices", 0))
+        columns[idx].metric("💻 Multi Device Accounts", stats.get("multiple_devices", 0))
 
 # Pie chart and trends.
 summary_df = pd.DataFrame({
