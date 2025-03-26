@@ -91,7 +91,7 @@ if alt_accounts:
             st.write("- 🖥️ Server: ", main_account.get('server_name', 'N/A'))
             st.write("- 📅 First Seen: ", main_account.get('first_seen', 'N/A'))
             st.write("- 🕒 Last Seen: ", main_account.get('last_seen', 'N/A'))
-            st.write("- Device ID: ", device_id)
+            st.write("- 🆔 Device ID: ", device_id)
             st.write("- 🆔 Gamertag ID: ", main_account.get('gamertag_id', 'N/A'))
         else:
             st.write("**Main Account:** Not found for device_id", device_id)
@@ -102,7 +102,7 @@ if alt_accounts:
             st.write("-  🖥️ Server: ", alt.get('server_name', 'N/A'))
             st.write("-  📅 First Seen: ", alt.get('first_seen', 'N/A'))
             st.write("-  🕒 Last Seen: ", alt.get('last_seen', 'N/A'))
-            st.write("-  Device ID: ", device_id)
+            st.write("-  🆔 Device ID: ", device_id)
             st.write("-  🆔 Gamertag ID: ", alt.get('gamertag_id', 'N/A'))
         st.write("---")
 else:
