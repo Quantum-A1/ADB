@@ -54,6 +54,7 @@ else:
 
 # --- New Section: List Detected Alt Accounts Grouped by Device ID with Pagination ---
 st.subheader("Detected Alt Accounts (Grouped by Device)")
+
 alt_accounts = fetch_alt_accounts(selected_server)
 
 if alt_accounts:
@@ -64,19 +65,31 @@ if alt_accounts:
         if device_id:
             device_groups.setdefault(device_id, []).append(account)
     
+    # Determine the maximum last_seen for each device group
+    device_max_last_seen = {}
+    for device_id, group in device_groups.items():
+        # Convert each last_seen value to a datetime object (if available)
+        last_seen_times = [
+            pd.to_datetime(acc.get("last_seen", None), errors='coerce') 
+            for acc in group if acc.get("last_seen")
+        ]
+        if last_seen_times:
+            device_max_last_seen[device_id] = max(last_seen_times)
+        else:
+            device_max_last_seen[device_id] = pd.Timestamp.min
+
+    # Sort device_ids in descending order by max last_seen timestamp
+    sorted_device_ids = sorted(device_groups.keys(), key=lambda d: device_max_last_seen[d], reverse=True)
+
     # Pagination: Display 10 device groups per page.
-    device_ids = list(device_groups.keys())
-    device_ids.sort()
     items_per_page = 10
-    total_pages = (len(device_ids) + items_per_page - 1) // items_per_page
-    
-    # Page selection widget
+    total_pages = (len(sorted_device_ids) + items_per_page - 1) // items_per_page
     page = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
     start_index = (page - 1) * items_per_page
     end_index = start_index + items_per_page
 
     # Display groups for the current page
-    for device_id in device_ids[start_index:end_index]:
+    for device_id in sorted_device_ids[start_index:end_index]:
         st.write(f"**Device ID:** {device_id}")
         # Get the main account (account with the same device_id and alt_flag False)
         main_account = fetch_main_account_by_device(device_id)
