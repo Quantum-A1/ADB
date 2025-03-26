@@ -15,7 +15,7 @@ df_accounts = pd.DataFrame(accounts)
 # Apply search filtering (by gamertag or server name)
 if not df_accounts.empty and search_term:
     df_accounts = df_accounts[
-        df_accounts["username"].str.contains(search_term, case=False) |
+        df_accounts["gamertag"].str.contains(search_term, case=False) |
         df_accounts["server_name"].str.contains(search_term, case=False)
     ]
 
@@ -32,7 +32,7 @@ if not df_accounts.empty:
     account_options = df_accounts.apply(
         lambda row: (
             row["id"],
-            f"{row['username']} - Server: {row['server_name']}"
+            f"{row['gamertag']} - Server: {row['server_name']}"
         ), axis=1
     ).tolist()
     selected_account_id = st.selectbox(
@@ -44,7 +44,7 @@ if not df_accounts.empty:
     selected_account = df_accounts[df_accounts["id"] == selected_account_id].iloc[0]
     
     with st.form("edit_account_form", clear_on_submit=True):
-        new_username = st.text_input("Username", value=selected_account.get("username", ""))
+        new_gamertag = st.text_input("Gamertag", value=selected_account.get("gamertag", ""))
         alt_flag = st.checkbox("Alt Account", value=selected_account.get("alt_flag", False))
         watchlisted = st.checkbox("Watchlisted", value=selected_account.get("watchlisted", False))
         whitelist = st.checkbox("Whitelisted", value=selected_account.get("whitelist", False))
@@ -53,7 +53,7 @@ if not df_accounts.empty:
         
         submit_account_edit = st.form_submit_button("Update Account")
         if submit_account_edit:
-            update_account_details(selected_account_id, new_username, alt_flag, watchlisted, whitelist, multi_devices)
+            update_account_details(selected_account_id, new_gamertag, alt_flag, watchlisted, whitelist, multi_devices)
             st.success("Account updated successfully.")
 else:
     st.write("No account available for editing.")

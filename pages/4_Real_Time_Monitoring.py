@@ -3,15 +3,21 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
-from common import fetch_stats, fetch_trend_data, fetch_alt_accounts, fetch_main_account_by_device
+from common import (
+    fetch_stats,
+    fetch_trend_data,
+    fetch_alt_accounts,
+    fetch_main_account_by_device,
+    fetch_servers  # New: Fetch available servers
+)
 
 st.header("Real-Time Monitoring & Alerts")
 
 # Auto-refresh every 60 seconds
 st_autorefresh(interval=60000, key="real_time_monitor")
 
-# Allow the user to select a server if needed
-server_options = ["All"]  # Extend by fetching available servers if needed
+# Allow the user to select a server by fetching available servers
+server_options = ["All"] + fetch_servers()  # Now includes servers from the DB
 selected_server = st.selectbox("Select Server", options=server_options)
 
 # Fetch live stats
@@ -37,7 +43,7 @@ if not df_trend.empty:
 else:
     st.write("No trend data available")
 
-# --- New Section: List Detected Alt Accounts Grouped by Device ID ---
+# --- New Section: List Detected Alt Accounts Grouped by Device ID with Pagination ---
 st.subheader("Detected Alt Accounts (Grouped by Device)")
 alt_accounts = fetch_alt_accounts(selected_server)
 
@@ -49,18 +55,29 @@ if alt_accounts:
         if device_id:
             device_groups.setdefault(device_id, []).append(account)
     
-    # For each device group, display the main account and its alt accounts.
-    for device_id, group in device_groups.items():
+    # Pagination: Display 10 device groups per page.
+    device_ids = list(device_groups.keys())
+    device_ids.sort()
+    items_per_page = 10
+    total_pages = (len(device_ids) + items_per_page - 1) // items_per_page
+    
+    # Page selection widget
+    page = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
+    start_index = (page - 1) * items_per_page
+    end_index = start_index + items_per_page
+
+    # Display groups for the current page
+    for device_id in device_ids[start_index:end_index]:
         # Get the main account (account with the same device_id and alt_flag False)
         main_account = fetch_main_account_by_device(device_id)
         if main_account:
-            st.write(f"**Main Account:** {main_account.get('username', 'N/A')} - Server: {main_account.get('server_name', 'N/A')}")
+            st.write(f"**Main Account:** {main_account.get('gamertag', 'N/A')} - Server: {main_account.get('server_name', 'N/A')}")
         else:
             st.write("**Main Account:** Not found for device_id " + str(device_id))
         
         # List the alt accounts in this group
-        for alt in group:
-            st.write(f"   - **Alt Account:** {alt.get('username', 'N/A')} - Server: {alt.get('server_name', 'N/A')}")
+        for alt in device_groups[device_id]:
+            st.write(f"   - **Alt Account:** {alt.get('gamertag', 'N/A')} - Server: {alt.get('server_name', 'N/A')}")
         st.write("---")
 else:
     st.write("No alt accounts detected.")
