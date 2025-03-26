@@ -385,3 +385,104 @@ def get_assigned_servers_for_user(discord_id):
             return [row["server_name"] for row in rows]
     finally:
         release_db_connection(conn)
+
+# In common.py, add these functions
+
+def log_activity(user_id, action, details):
+    """Logs an activity performed by a user."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            INSERT INTO activity_logs (user_id, action, details, timestamp)
+            VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(query, (user_id, action, details))
+            conn.commit()
+    finally:
+        release_db_connection(conn)
+
+def fetch_activity_logs():
+    """Fetches all activity logs ordered by the most recent."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM activity_logs ORDER BY timestamp DESC")
+            logs = cursor.fetchall()
+    finally:
+        release_db_connection(conn)
+    return logs
+
+# In common.py, add these functions
+
+def add_user_feedback(user_id, subject, message):
+    """Insert user feedback into the database."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            INSERT INTO user_feedback (user_id, subject, message, timestamp)
+            VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(query, (user_id, subject, message))
+            conn.commit()
+    finally:
+        release_db_connection(conn)
+
+def fetch_feedback():
+    """Fetch all feedback entries."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM user_feedback ORDER BY timestamp DESC")
+            feedback = cursor.fetchall()
+    finally:
+        release_db_connection(conn)
+    return feedback
+
+def fetch_alt_accounts(server_name=None):
+    """Fetches accounts flagged as alt accounts, optionally filtering by server."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = "SELECT * FROM players WHERE alt_flag = TRUE"
+            if server_name and server_name != "All":
+                query += " AND LOWER(TRIM(server_name)) LIKE CONCAT('%%', LOWER(TRIM(%s)), '%%')"
+                cursor.execute(query, (server_name,))
+            else:
+                cursor.execute(query)
+            rows = cursor.fetchall()
+    finally:
+        release_db_connection(conn)
+    return rows
+
+def fetch_all_accounts():
+    """Fetches all accounts from the players table."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = "SELECT * FROM players ORDER BY id DESC"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+    finally:
+        release_db_connection(conn)
+    return rows
+
+def update_account_details(account_id, new_username, alt_flag, watchlisted, whitelist, multi_devices):
+    """Updates account details in the players table."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+                UPDATE players
+                SET username = %s,
+                    alt_flag = %s,
+                    watchlisted = %s,
+                    whitelist = %s,
+                    multi_devices = %s
+                WHERE id = %s
+            """
+            cursor.execute(query, (new_username, alt_flag, watchlisted, whitelist, multi_devices, account_id))
+            conn.commit()
+    finally:
+        release_db_connection(conn)

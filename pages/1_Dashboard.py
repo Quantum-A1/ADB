@@ -17,15 +17,30 @@ else:
     server_options = ["All"] + fetch_servers()
 
 st.header("Dashboard")
+st.sidebar.subheader("Customize Dashboard")
+selected_metrics = st.sidebar.multiselect(
+    "Select metrics to display",
+    options=["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"],
+    default=["Total Players", "Flagged Accounts", "Watchlisted Accounts", "Whitelisted Accounts"]
+)
+
 selected_server = st.selectbox("Select Server (for all stats)", options=server_options)
 
 # Fetch and display stats.
 stats = fetch_stats(selected_server)
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Players", stats["total_players"])
-col2.metric("Flagged Accounts", stats["flagged_accounts"])
-col3.metric("Watchlisted Accounts", stats["watchlisted_accounts"])
-col4.metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+# Create columns dynamically based on the number of selected metrics
+num_metrics = len(selected_metrics)
+columns = st.columns(num_metrics)
+for idx, metric in enumerate(selected_metrics):
+    if metric == "Total Players":
+        columns[idx].metric("Total Players", stats["total_players"])
+    elif metric == "Flagged Accounts":
+        columns[idx].metric("Flagged Accounts", stats["flagged_accounts"])
+    elif metric == "Watchlisted Accounts":
+        columns[idx].metric("Watchlisted Accounts", stats["watchlisted_accounts"])
+    elif metric == "Whitelisted Accounts":
+        columns[idx].metric("Whitelisted Accounts", stats["whitelisted_accounts"])
+
 
 # Pie chart and trends.
 summary_df = pd.DataFrame({

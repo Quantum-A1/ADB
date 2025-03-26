@@ -1,4 +1,5 @@
 streamlit
+streamlit-autorefresh
 pymysql
 pandas
 python-dotenv

@@ -24,10 +24,19 @@ if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
     st.stop()
 
 st.header("User Management")
+search_term = st.text_input("Search Users", "")
+
+# Fetch user access records once
+df_users_full = fetch_user_access()
+if not df_users_full.empty and search_term:
+    df_users = df_users_full[
+        df_users_full["username"].str.contains(search_term, case=False) |
+        df_users_full["discord_id"].str.contains(search_term, case=False)
+    ]
+else:
+    df_users = df_users_full
 
 # --- User Stats Section (Metrics & Pie Chart) ---
-df_users = fetch_user_access()
-
 if not df_users.empty:
     access_counts = df_users["access_level"].value_counts().to_dict()
     total_users = len(df_users)

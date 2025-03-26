@@ -1,0 +1,56 @@
+# LoggedAccounts.py
+import streamlit as st
+import pandas as pd
+from common import fetch_all_accounts, update_account_details
+
+st.header("Logged Accounts")
+
+# Search bar to filter accounts
+search_term = st.text_input("Search Logged Accounts", "")
+
+# Fetch all logged accounts
+accounts = fetch_all_accounts()
+df_accounts = pd.DataFrame(accounts)
+
+# Apply search filtering (for example, by username or server name)
+if not df_accounts.empty and search_term:
+    df_accounts = df_accounts[
+        df_accounts["username"].str.contains(search_term, case=False) |
+        df_accounts["server_name"].str.contains(search_term, case=False)
+    ]
+
+# Display accounts table
+if not df_accounts.empty:
+    st.dataframe(df_accounts)
+else:
+    st.write("No logged accounts found.")
+
+# --- Edit Account Section ---
+st.subheader("Edit Account")
+if not df_accounts.empty:
+    # Create dropdown options based on account id and descriptive text.
+    account_options = df_accounts.apply(
+        lambda row: (row["id"], f"{row.get('username', 'N/A')} - Server: {row.get('server_name', 'N/A')}"), axis=1
+    ).tolist()
+    selected_account_id = st.selectbox(
+        "Select an account to edit",
+        options=[opt[0] for opt in account_options],
+        format_func=lambda x: next((opt[1] for opt in account_options if opt[0] == x), x)
+    )
+    # Retrieve the selected account details
+    selected_account = df_accounts[df_accounts["id"] == selected_account_id].iloc[0]
+    
+    with st.form("edit_account_form", clear_on_submit=True):
+        new_username = st.text_input("Username", value=selected_account.get("username", ""))
+        alt_flag = st.checkbox("Alt Account", value=selected_account.get("alt_flag", False))
+        watchlisted = st.checkbox("Watchlisted", value=selected_account.get("watchlisted", False))
+        whitelist = st.checkbox("Whitelisted", value=selected_account.get("whitelist", False))
+        # If you have a column for multi-device detection; otherwise, remove this field.
+        multi_devices = st.checkbox("Multi Devices", value=selected_account.get("multi_devices", False))
+        
+        submit_account_edit = st.form_submit_button("Update Account")
+        if submit_account_edit:
+            update_account_details(selected_account_id, new_username, alt_flag, watchlisted, whitelist, multi_devices)
+            st.success("Account updated successfully.")
+else:
+    st.write("No account available for editing.")
