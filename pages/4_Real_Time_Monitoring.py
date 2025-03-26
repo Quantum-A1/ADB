@@ -65,17 +65,13 @@ if alt_accounts:
         if device_id:
             device_groups.setdefault(device_id, []).append(account)
     
-    # For each device group, determine the maximum account ID (assumed to reflect recency)
+    # For each device group, get the maximum account ID (assuming recency)
     group_max_id = {}
     for device_id, group in device_groups.items():
-        # Make sure to only include alt accounts with valid IDs.
         ids = [acc.get("id") for acc in group if acc.get("id") is not None]
-        if ids:
-            group_max_id[device_id] = max(ids)
-        else:
-            group_max_id[device_id] = 0
+        group_max_id[device_id] = max(ids) if ids else 0
 
-    # Sort device groups in descending order by the maximum alt account ID.
+    # Sort device groups in descending order by max account ID
     sorted_device_ids = sorted(device_groups.keys(), key=lambda d: group_max_id[d], reverse=True)
 
     # Pagination: Display 10 device groups per page.
@@ -87,26 +83,34 @@ if alt_accounts:
 
     # Display groups for the current page
     for device_id in sorted_device_ids[start_index:end_index]:
-        st.write(f"**Device ID:** {device_id}")
+        st.markdown(f"**Device ID:** {device_id}")
         # Get the main account (account with the same device_id and alt_flag False)
         main_account = fetch_main_account_by_device(device_id)
         if main_account:
-            st.write("**👑 Main Account:**")
-            st.write(f"📛 Gamertag: {main_account.get('gamertag', 'N/A')}")
-            st.write(f"🖥️ Server: {main_account.get('server_name', 'N/A')}")
-            st.write(f"📅 First Seen: {main_account.get('first_seen', 'N/A')}")
-            st.write(f"🕒 Last Seen: {main_account.get('last_seen', 'N/A')}")
-            st.write(f"🆔 Gamertag ID: {main_account.get('gamertag_id', 'N/A')}")
+            main_info = f"""
+**👑 Main Account:**
+📛 Gamertag: {main_account.get('gamertag', 'N/A')}
+🖥️ Server: {main_account.get('server_name', 'N/A')}
+📅 First Seen: {main_account.get('first_seen', 'N/A')}
+🕒 Last Seen: {main_account.get('last_seen', 'N/A')}
+Device ID: {device_id}
+🆔 Gamertag ID: {main_account.get('gamertag_id', 'N/A')}
+"""
+            st.markdown(main_info)
         else:
-            st.write("**Main Account:** Not found for device_id " + str(device_id))
+            st.markdown(f"**Main Account:** Not found for device_id {device_id}")
         
-        st.write("**🔗 Alt Accounts:**")
+        st.markdown("**🔗 Alt Accounts:**")
         for alt in device_groups[device_id]:
-            st.write(f"- 📛 Gamertag: {alt.get('gamertag', 'N/A')}")
-            st.write(f"  🖥️ Server: {alt.get('server_name', 'N/A')}")
-            st.write(f"  📅 First Seen: {alt.get('first_seen', 'N/A')}")
-            st.write(f"  🕒 Last Seen: {alt.get('last_seen', 'N/A')}")
-            st.write(f"  🆔 Gamertag ID: {alt.get('gamertag_id', 'N/A')}")
-        st.write("---")
+            alt_info = f"""
+- 📛 Gamertag: {alt.get('gamertag', 'N/A')}
+  🖥️ Server: {alt.get('server_name', 'N/A')}
+  📅 First Seen: {alt.get('first_seen', 'N/A')}
+  🕒 Last Seen: {alt.get('last_seen', 'N/A')}
+  Device ID: {device_id}
+  🆔 Gamertag ID: {alt.get('gamertag_id', 'N/A')}
+"""
+            st.markdown(alt_info)
+        st.markdown("---")
 else:
     st.write("No alt accounts detected.")
