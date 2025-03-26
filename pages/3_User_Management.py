@@ -80,17 +80,24 @@ with st.form("add_user_form", clear_on_submit=True):
 # --- Unified Edit User Section ---
 st.subheader("Edit User")
 if not df_users.empty:
-    # Create a dropdown list of users using discord_id as the value and "username (discord_id)" as display text.
-    user_options = df_users.apply(lambda row: (row["discord_id"], f"{row['username']} ({row['discord_id']})"), axis=1).tolist()
+    # Build dropdown: each option is (discord_id, "username (discord_id)")
+    user_options = df_users.apply(
+        lambda row: (row["discord_id"], f"{row['username']} ({row['discord_id']})"), axis=1
+    ).tolist()
     selected_discord_id = st.selectbox(
         "Select a user to edit",
         options=[opt[0] for opt in user_options],
         format_func=lambda x: next((opt[1] for opt in user_options if opt[0] == x), x)
     )
-    # Get the selected user's record.
+    # Retrieve the selected user's record.
     selected_user_record = df_users[df_users["discord_id"] == selected_discord_id].iloc[0]
     # Pre-load assigned servers for this user.
     current_assigned_servers = get_assigned_servers_for_user(selected_discord_id)
+    
+    # Define role hierarchy.
+    hierarchy = {"user": 1, "moderator": 2, "admin": 3, "super-admin": 4}
+    current_logged_in_level = hierarchy.get(user["access_level"], 1)
+    selected_user_level = hierarchy.get(selected_user_record.get("access_level", "user"), 1)
     
     with st.form("edit_user_form", clear_on_submit=True):
         st.text_input("Discord ID", value=selected_user_record["discord_id"], disabled=True)
@@ -111,14 +118,39 @@ if not df_users.empty:
         remove_button = col2.form_submit_button("Remove User")
         update_servers_button = col3.form_submit_button("Update Server Assignments")
         
-        if update_button:
-            update_user_access(selected_discord_id, new_username, new_access)
-            st.success("User information updated successfully.")
-        if remove_button:
-            remove_user_by_discord_id(selected_discord_id)
-            st.success("User removed successfully.")
-        if update_servers_button:
-            assign_servers_to_user(selected_discord_id, new_assigned_servers)
-            st.success("Server assignments updated successfully.")
+        # If not the bot owner, enforce that you cannot modify a user with equal or higher permission.
+        if user["id"] != st.secrets["BOT_OWNER_ID"]:
+            if update_button:
+                new_level = hierarchy.get(new_access, 1)
+                if current_logged_in_level <= selected_user_level:
+                    st.error("You cannot update a user with equal or higher permissions than yours.")
+                elif new_level > current_logged_in_level:
+                    st.error("You cannot set a user's permission level to be higher than yours.")
+                else:
+                    update_user_access(selected_discord_id, new_username, new_access)
+                    st.success("User information updated successfully.")
+            if remove_button:
+                if current_logged_in_level <= selected_user_level:
+                    st.error("You cannot remove a user with equal or higher permissions than yours.")
+                else:
+                    remove_user_by_discord_id(selected_discord_id)
+                    st.success("User removed successfully.")
+            if update_servers_button:
+                if current_logged_in_level <= selected_user_level:
+                    st.error("You cannot update server assignments for a user with equal or higher permissions than yours.")
+                else:
+                    assign_servers_to_user(selected_discord_id, new_assigned_servers)
+                    st.success("Server assignments updated successfully.")
+        else:
+            # Bot owner bypasses permission checks.
+            if update_button:
+                update_user_access(selected_discord_id, new_username, new_access)
+                st.success("User information updated successfully.")
+            if remove_button:
+                remove_user_by_discord_id(selected_discord_id)
+                st.success("User removed successfully.")
+            if update_servers_button:
+                assign_servers_to_user(selected_discord_id, new_assigned_servers)
+                st.success("Server assignments updated successfully.")
 else:
     st.write("No user records to edit.")
