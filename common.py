@@ -480,7 +480,7 @@ def fetch_all_accounts():
         release_db_connection(conn)
     return rows
 
-def update_account_details(account_id, new_gamertag, alt_flag, watchlisted, whitelist, multi_devices):
+def update_account_details(account_id, new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices):
     """Updates account details in the players table using the 'gamertag' column."""
     conn = get_db_connection()
     try:
@@ -491,10 +491,10 @@ def update_account_details(account_id, new_gamertag, alt_flag, watchlisted, whit
                     alt_flag = %s,
                     watchlisted = %s,
                     whitelist = %s,
-                    multi_devices = %s
+                    multiple_devices = %s
                 WHERE id = %s
             """
-            cursor.execute(query, (new_gamertag, alt_flag, watchlisted, whitelist, multi_devices, account_id))
+            cursor.execute(query, (new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices, account_id))
             conn.commit()
     finally:
         release_db_connection(conn)
