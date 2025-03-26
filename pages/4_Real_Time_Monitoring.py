@@ -83,7 +83,6 @@ if alt_accounts:
 
     # Display groups for the current page in a list view
     for device_id in sorted_device_ids[start_index:end_index]:
-        st.write(f"**Device ID:** {device_id}")
         # Get the main account (account with the same device_id and alt_flag False)
         main_account = fetch_main_account_by_device(device_id)
         if main_account:
