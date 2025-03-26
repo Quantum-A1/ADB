@@ -152,7 +152,7 @@ def fetch_stats(server_name=None):
             whitelisted_accounts = cursor.fetchone()["whitelisted_accounts"]
 
             # New: Query to count accounts using multiple devices.
-            multi_query = "SELECT COUNT(*) AS multiple_devices FROM players WHERE multi_devices = TRUE"
+            multi_query = "SELECT COUNT(*) AS multiple_devices FROM players WHERE multiple_devices = TRUE"
             if server_name and server_name != "All":
                 multi_query += " AND LOWER(TRIM(server_name)) LIKE CONCAT('%%', LOWER(TRIM(%s)), '%%')"
                 cursor.execute(multi_query, (server_name,))
