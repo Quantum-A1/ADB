@@ -60,7 +60,7 @@ if not df_accounts.empty:
         watchlisted = st.checkbox("Watchlisted", value=selected_account.get("watchlisted", False))
         whitelist = st.checkbox("Whitelisted", value=selected_account.get("whitelist", False))
         # If you have a column for multi-device detection; otherwise, remove this field.
-        multi_devices = st.checkbox("Multi Devices", value=selected_account.get("multi_devices", False))
+        multi_devices = st.checkbox("Multiple Devices", value=selected_account.get("multiple_devices", False))
         
         submit_account_edit = st.form_submit_button("Update Account")
         if submit_account_edit:
