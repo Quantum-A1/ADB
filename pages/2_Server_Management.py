@@ -20,7 +20,7 @@ if access_level == "user":
 else:
     server_options = fetch_servers()
 
-st.header("Server Management")
+st.header("🧑‍💻 Server Management")
 st.write("Below is a list of your server configurations:")
 
 # Display server configurations filtered by user permissions.
@@ -49,7 +49,7 @@ if server_configs:
 else:
     st.write("No server configurations found.")
 
-st.subheader("Edit Server Configuration")
+st.subheader("⚙️ Edit Server Configuration")
 if server_options:
     selected_server = st.selectbox("Select a server to edit", options=server_options)
     config = fetch_server_config(selected_server)

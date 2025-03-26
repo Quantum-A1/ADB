@@ -23,7 +23,7 @@ if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
     st.error("Access Denied: Only admin, super-admin, or bot owner can access this page.")
     st.stop()
 
-st.header("User Management")
+st.header("👤 User Management")
 search_term = st.text_input("Search Users", "")
 
 # Fetch user access records once
@@ -46,13 +46,13 @@ if not df_users.empty:
     super_admin_count = access_counts.get("super-admin", 0)
     
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Total Users", total_users)
-    col2.metric("User", user_count)
-    col3.metric("Moderator", moderator_count)
-    col4.metric("Admin", admin_count)
-    col5.metric("Super-admin", super_admin_count)
+    col1.metric("👤 Total Users", total_users)
+    col2.metric("🧍 User", user_count)
+    col3.metric("👨‍💼 Moderator", moderator_count)
+    col4.metric("✅ Admin", admin_count)
+    col5.metric("☑️ Super-admin", super_admin_count)
     
-    st.subheader("User Access Distribution")
+    st.subheader("🔑 User Access Distribution")
     stats_df = pd.DataFrame({
         "Access Level": list(access_counts.keys()),
         "Count": list(access_counts.values())
@@ -74,7 +74,7 @@ else:
     st.write("No user access records found.")
 
 # --- Add New User Section ---
-st.subheader("Add New User")
+st.subheader("➕ Add New User")
 with st.form("add_user_form", clear_on_submit=True):
     new_discord_id = st.text_input("Discord ID")
     new_username = st.text_input("Username")
@@ -87,7 +87,7 @@ with st.form("add_user_form", clear_on_submit=True):
             st.error("Please provide both Discord ID and Username.")
 
 # --- Unified Edit User Section ---
-st.subheader("Edit User")
+st.subheader("📋 Edit User")
 if not df_users.empty:
     # Build dropdown: each option is (discord_id, "username (discord_id)")
     user_options = df_users.apply(
