@@ -152,13 +152,13 @@ def fetch_stats(server_name=None):
             whitelisted_accounts = cursor.fetchone()["whitelisted_accounts"]
 
             # New: Query to count accounts using multiple devices.
-            multi_query = "SELECT COUNT(*) AS multi_devices FROM players WHERE multi_devices = TRUE"
+            multi_query = "SELECT COUNT(*) AS multiple_devices FROM players WHERE multi_devices = TRUE"
             if server_name and server_name != "All":
                 multi_query += " AND LOWER(TRIM(server_name)) LIKE CONCAT('%%', LOWER(TRIM(%s)), '%%')"
                 cursor.execute(multi_query, (server_name,))
             else:
                 cursor.execute(multi_query)
-            multi_devices = cursor.fetchone()["multi_devices"]
+            multiple_devices = cursor.fetchone()["multiple_devices"]
     finally:
         release_db_connection(conn)
 
@@ -167,8 +167,9 @@ def fetch_stats(server_name=None):
         "flagged_accounts": flagged_accounts,
         "watchlisted_accounts": watchlisted_accounts,
         "whitelisted_accounts": whitelisted_accounts,
-        "multi_devices": multi_devices
+        "multiple_devices": multiple_devices
     }
+
 
 
 def fetch_trend_data(server_name=None):

@@ -22,14 +22,14 @@ selected_metrics = st.sidebar.multiselect(
         "Flagged Accounts", 
         "Watchlisted Accounts", 
         "Whitelisted Accounts",
-        "Multi Device Accounts"  # New metric option
+        "Multi Device Accounts"  # Option label remains; underlying key will be 'multiple_devices'
     ],
     default=[
         "Total Players", 
         "Flagged Accounts", 
         "Watchlisted Accounts", 
         "Whitelisted Accounts",
-        "Multi Device Accounts"  # Include by default if desired
+        "Multi Device Accounts"
     ]
 )
 
@@ -50,7 +50,7 @@ for idx, metric in enumerate(selected_metrics):
     elif metric == "Whitelisted Accounts":
         columns[idx].metric("Whitelisted Accounts", stats["whitelisted_accounts"])
     elif metric == "Multi Device Accounts":
-        columns[idx].metric("Multi Device Accounts", stats.get("multi_devices", 0))
+        columns[idx].metric("Multi Device Accounts", stats.get("multiple_devices", 0))
 
 # Pie chart and trends.
 summary_df = pd.DataFrame({
@@ -64,7 +64,7 @@ summary_df = pd.DataFrame({
         stats["flagged_accounts"], 
         stats["watchlisted_accounts"], 
         stats["whitelisted_accounts"],
-        stats.get("multi_devices", 0)
+        stats.get("multiple_devices", 0)
     ]
 })
 st.subheader("Summary Statistics Distribution")
