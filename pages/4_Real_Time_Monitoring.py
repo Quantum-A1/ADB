@@ -65,21 +65,18 @@ if alt_accounts:
         if device_id:
             device_groups.setdefault(device_id, []).append(account)
     
-    # Determine the maximum last_seen for each device group
-    device_max_last_seen = {}
+    # For each device group, determine the maximum account ID (assumed to reflect recency)
+    group_max_id = {}
     for device_id, group in device_groups.items():
-        # Convert each last_seen value to a datetime object (if available)
-        last_seen_times = [
-            pd.to_datetime(acc.get("last_seen", None), errors='coerce') 
-            for acc in group if acc.get("last_seen")
-        ]
-        if last_seen_times:
-            device_max_last_seen[device_id] = max(last_seen_times)
+        # Make sure to only include alt accounts with valid IDs.
+        ids = [acc.get("id") for acc in group if acc.get("id") is not None]
+        if ids:
+            group_max_id[device_id] = max(ids)
         else:
-            device_max_last_seen[device_id] = pd.Timestamp.min
+            group_max_id[device_id] = 0
 
-    # Sort device_ids in descending order by max last_seen timestamp
-    sorted_device_ids = sorted(device_groups.keys(), key=lambda d: device_max_last_seen[d], reverse=True)
+    # Sort device groups in descending order by the maximum alt account ID.
+    sorted_device_ids = sorted(device_groups.keys(), key=lambda d: group_max_id[d], reverse=True)
 
     # Pagination: Display 10 device groups per page.
     items_per_page = 10
