@@ -18,10 +18,12 @@ st.header("Logged Accounts")
 search_term = st.text_input("Search Logged Accounts (Gamertag or Device ID)", "")
 
 st.markdown("#### Filter by Flags")
-filter_alt = st.checkbox("Alt Accounts", value=False)
-filter_watchlisted = st.checkbox("Watchlisted", value=False)
-filter_whitelisted = st.checkbox("Whitelisted", value=False)
-filter_multiple = st.checkbox("Multiple Device Accounts", value=False)
+# Arrange the flag checkboxes in a row using st.columns.
+cols = st.columns(4)
+filter_alt = cols[0].checkbox("Alt Accounts", value=False)
+filter_watchlisted = cols[1].checkbox("Watchlisted", value=False)
+filter_whitelisted = cols[2].checkbox("Whitelisted", value=False)
+filter_multiple = cols[3].checkbox("Multiple Device Accounts", value=False)
 
 # Fetch all logged accounts
 accounts = fetch_all_accounts()
