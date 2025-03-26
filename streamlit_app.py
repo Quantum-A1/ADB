@@ -57,7 +57,7 @@ else:
 st.session_state["user"] = user
 
 st.write(f"Welcome, **{user['username']}**! Your access level is **{user['access_level']}**.")
-st.write(f"Welcome, **Please use the navigation bar on the left to see different parts of the ADB Dashboard**.")
+st.write(f"**Please use the navigation bar on the left to see different parts of the ADB Dashboard**.")
 
 # (Optional) Additional authorization: restrict access if the user is not in the allowed IDs.
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
