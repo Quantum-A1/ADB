@@ -13,7 +13,7 @@ if access_level == "user":
 else:
     server_options = ["All"] + fetch_servers()
 
-st.header("Dashboard")
+st.header("🏠 Dashboard")
 st.sidebar.subheader("Customize Dashboard")
 selected_metrics = st.sidebar.multiselect(
     "Select metrics to display",
