@@ -32,12 +32,12 @@ selected_server = st.selectbox("Select Server", options=server_options)
 stats = fetch_stats(selected_server)
 
 # Display metrics
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("👤 Total Players", stats["total_players"])
 col2.metric("🚩 Flagged Accounts", stats["flagged_accounts"])
 col3.metric("👀 Watchlisted Accounts", stats["watchlisted_accounts"])
 col4.metric("🛡️ Whitelisted Accounts", stats["whitelisted_accounts"])
-col5.metric("🛡️ Multi Device Accounts", stats["multiple_devices"])
+col5.metric("💻 Multi Device Accounts", stats["multiple_devices"])
 
 # Trigger an alert if flagged accounts exceed a threshold (example: 50)
 if stats["flagged_accounts"] > 50:
