@@ -1,18 +1,29 @@
 # LoggedAccounts.py
 import streamlit as st
 import pandas as pd
-from common import fetch_all_accounts, update_account_details
+from common import fetch_all_accounts, update_account_details, fetch_servers, fetch_servers_for_user
+
+user = st.session_state.get("user")
+access_level = user.get("access_level", "user")
+
+# Determine allowed servers for this user.
+if access_level == "user":
+    allowed_servers = fetch_servers_for_user(user["id"])
+else:
+    allowed_servers = fetch_servers()
 
 st.header("Logged Accounts")
-
-# Search bar to filter accounts
 search_term = st.text_input("Search Logged Accounts", "")
 
 # Fetch all logged accounts
 accounts = fetch_all_accounts()
 df_accounts = pd.DataFrame(accounts)
 
-# Apply search filtering (by gamertag or server name)
+# Filter logged accounts by allowed servers
+if not df_accounts.empty:
+    df_accounts = df_accounts[df_accounts["server_name"].isin(allowed_servers)]
+
+# Apply additional search filtering (by gamertag or server name)
 if not df_accounts.empty and search_term:
     df_accounts = df_accounts[
         df_accounts["gamertag"].str.contains(search_term, case=False) |

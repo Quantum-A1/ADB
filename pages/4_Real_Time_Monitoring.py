@@ -8,16 +8,24 @@ from common import (
     fetch_trend_data,
     fetch_alt_accounts,
     fetch_main_account_by_device,
-    fetch_servers  # New: Fetch available servers
+    fetch_servers,
+    fetch_servers_for_user
 )
+
+user = st.session_state.get("user")
+access_level = user.get("access_level", "user")
 
 st.header("Real-Time Monitoring & Alerts")
 
 # Auto-refresh every 60 seconds
 st_autorefresh(interval=60000, key="real_time_monitor")
 
-# Allow the user to select a server by fetching available servers
-server_options = ["All"] + fetch_servers()  # Now includes servers from the DB
+# Determine allowed servers for this user.
+if access_level == "user":
+    server_options = ["All"] + fetch_servers_for_user(user["id"])
+else:
+    server_options = ["All"] + fetch_servers()
+
 selected_server = st.selectbox("Select Server", options=server_options)
 
 # Fetch live stats
