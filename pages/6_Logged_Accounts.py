@@ -12,7 +12,7 @@ search_term = st.text_input("Search Logged Accounts", "")
 accounts = fetch_all_accounts()
 df_accounts = pd.DataFrame(accounts)
 
-# Apply search filtering (for example, by username or server name)
+# Apply search filtering (by gamertag or server name)
 if not df_accounts.empty and search_term:
     df_accounts = df_accounts[
         df_accounts["username"].str.contains(search_term, case=False) |
@@ -28,14 +28,17 @@ else:
 # --- Edit Account Section ---
 st.subheader("Edit Account")
 if not df_accounts.empty:
-    # Create dropdown options based on account id and descriptive text.
+    # Build dropdown options based on account id and descriptive text.
     account_options = df_accounts.apply(
-        lambda row: (row["id"], f"{row.get('username', 'N/A')} - Server: {row.get('server_name', 'N/A')}"), axis=1
+        lambda row: (
+            row["id"],
+            f"{row['username']} - Server: {row['server_name']}"
+        ), axis=1
     ).tolist()
     selected_account_id = st.selectbox(
         "Select an account to edit",
         options=[opt[0] for opt in account_options],
-        format_func=lambda x: next((opt[1] for opt in account_options if opt[0] == x), x)
+        format_func=lambda x: next((opt[1] for opt in account_options if opt[0] == x), str(x))
     )
     # Retrieve the selected account details
     selected_account = df_accounts[df_accounts["id"] == selected_account_id].iloc[0]

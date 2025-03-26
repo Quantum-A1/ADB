@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
-from common import fetch_stats, fetch_trend_data, fetch_alt_accounts
+from common import fetch_stats, fetch_trend_data, fetch_alt_accounts, fetch_main_account_by_device
 
 st.header("Real-Time Monitoring & Alerts")
 
@@ -11,7 +11,7 @@ st.header("Real-Time Monitoring & Alerts")
 st_autorefresh(interval=60000, key="real_time_monitor")
 
 # Allow the user to select a server if needed
-server_options = ["All"]  # You can extend this by fetching servers as in your Dashboard
+server_options = ["All"]  # Extend by fetching available servers if needed
 selected_server = st.selectbox("Select Server", options=server_options)
 
 # Fetch live stats
@@ -37,12 +37,30 @@ if not df_trend.empty:
 else:
     st.write("No trend data available")
 
-# --- New Section: List Detected Alt Accounts ---
-st.subheader("Detected Alt Accounts")
+# --- New Section: List Detected Alt Accounts Grouped by Device ID ---
+st.subheader("Detected Alt Accounts (Grouped by Device)")
 alt_accounts = fetch_alt_accounts(selected_server)
+
 if alt_accounts:
-    # Display each alt account as a list item.
+    # Group alt accounts by device_id
+    device_groups = {}
     for account in alt_accounts:
-        st.write(f"{account.get('username', 'N/A')} - Server: {account.get('server_name', 'N/A')}")
+        device_id = account.get("device_id")
+        if device_id:
+            device_groups.setdefault(device_id, []).append(account)
+    
+    # For each device group, display the main account and its alt accounts.
+    for device_id, group in device_groups.items():
+        # Get the main account (account with the same device_id and alt_flag False)
+        main_account = fetch_main_account_by_device(device_id)
+        if main_account:
+            st.write(f"**Main Account:** {main_account.get('username', 'N/A')} - Server: {main_account.get('server_name', 'N/A')}")
+        else:
+            st.write("**Main Account:** Not found for device_id " + str(device_id))
+        
+        # List the alt accounts in this group
+        for alt in group:
+            st.write(f"   - **Alt Account:** {alt.get('username', 'N/A')} - Server: {alt.get('server_name', 'N/A')}")
+        st.write("---")
 else:
     st.write("No alt accounts detected.")

@@ -486,3 +486,15 @@ def update_account_details(account_id, new_username, alt_flag, watchlisted, whit
             conn.commit()
     finally:
         release_db_connection(conn)
+        
+def fetch_main_account_by_device(device_id):
+    """Fetch the main account (without an alt flag) for a given device_id."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = "SELECT * FROM players WHERE device_id = %s AND alt_flag = FALSE LIMIT 1"
+            cursor.execute(query, (device_id,))
+            main_account = cursor.fetchone()
+    finally:
+        release_db_connection(conn)
+    return main_account
