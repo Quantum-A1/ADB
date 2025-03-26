@@ -12,12 +12,12 @@ if access_level == "user":
 else:
     allowed_servers = fetch_servers()
 
-st.header("Logged Accounts")
+st.header("📝 Logged Accounts")
 
 # Search bar to filter on gamertag or device_id
 search_term = st.text_input("Search Logged Accounts (Gamertag or Device ID)", "")
 
-st.markdown("#### Filter by Flags")
+st.markdown("#### 🔎 Filter by Flags")
 # Arrange the flag checkboxes in a row using st.columns.
 cols = st.columns(4)
 filter_alt = cols[0].checkbox("Alt Accounts", value=False)
@@ -57,7 +57,7 @@ else:
     st.write("No logged accounts found for the selected filters.")
 
 # --- Edit Account Section ---
-st.subheader("Edit Account")
+st.subheader("📋 Edit Account")
 if not df_accounts.empty:
     # Build dropdown options based on account id and descriptive text.
     account_options = df_accounts.apply(
