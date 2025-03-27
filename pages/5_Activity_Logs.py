@@ -4,6 +4,13 @@ import pandas as pd
 import json
 from common import fetch_activity_logs
 
+# Check user access level – only allow moderators and above.
+user = st.session_state.get("user")
+access_level = user.get("access_level", "user")
+if access_level not in ["moderator", "admin", "super-admin"]:
+    st.error("Access Denied: You must be a moderator or higher to view activity logs.")
+    st.stop()
+
 def diff_states(before_json, after_json):
     """
     Given two JSON strings representing before and after states,
@@ -22,7 +29,6 @@ def diff_states(before_json, after_json):
     except Exception:
         after = {}
     
-    # If either parsed value is not a dict, return no diff.
     if not isinstance(before, dict) or not isinstance(after, dict):
         return "", ""
     
@@ -30,7 +36,6 @@ def diff_states(before_json, after_json):
     diffs_after = []
     for key in keys_to_check:
         if before.get(key) != after.get(key):
-            # For boolean flags, show Yes/No
             b = before.get(key)
             a = after.get(key)
             b_str = "Yes" if b else "No"

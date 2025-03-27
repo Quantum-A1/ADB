@@ -7,11 +7,10 @@ from common import (
     exchange_code_for_token,
     fetch_user_info,
     init_db_pool,
-    get_user_record  # new helper to get the user record and access level
+    get_user_record  # helper to get the user record and access level
 )
 
 st.set_page_config(layout="wide")
-
 
 # Load secrets if needed.
 if not st.secrets:
@@ -52,12 +51,13 @@ user_record = get_user_record(user["id"])
 if user_record:
     user["access_level"] = user_record.get("access_level", "user")
 else:
-    user["access_level"] = "user"  # default access level
+    st.error("Your account is not authorized. Please contact an administrator.")
+    st.stop()
 
 st.session_state["user"] = user
 
 st.write(f"Welcome, **{user['username']}**! Your access level is **{user['access_level']}**.")
-st.write(f"**Please use the navigation bar on the left to see different parts of the ADB Dashboard**.")
+st.write("**Please use the navigation bar on the left to see different parts of the ADB Dashboard**.")
 
 # (Optional) Additional authorization: restrict access if the user is not in the allowed IDs.
 allowed_ids = st.secrets.get("ALLOWED_DISCORD_IDS", "").split(",")
