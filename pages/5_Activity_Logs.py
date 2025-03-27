@@ -7,28 +7,29 @@ from common import fetch_activity_logs
 def diff_states(before_json, after_json):
     """
     Given two JSON strings representing before and after states,
-    return concise diff summaries for only the fields that changed.
-    If the parsed values are not dictionaries, return the original strings.
+    return concise diff summaries for only the keys:
+    'alt_flag', 'watchlisted', 'whitelist', and 'multiple_devices'.
+    For each key that has changed, it returns a summary like:
+    "Whitelist - No" in the before state and "Whitelist - Yes" in the after state.
     """
+    keys_to_check = ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]
     try:
         before = json.loads(before_json)
+    except Exception:
+        before = {}
+    try:
         after = json.loads(after_json)
-    except Exception as e:
-        return before_json, after_json
-
-    # If the parsed values are not dictionaries, return the raw strings.
-    if not isinstance(before, dict) or not isinstance(after, dict):
-        return before_json, after_json
-
+    except Exception:
+        after = {}
+        
     diffs_before = []
     diffs_after = []
-    # Compare keys from both dictionaries.
-    for key in set(before.keys()).union(after.keys()):
+    for key in keys_to_check:
         b = before.get(key)
         a = after.get(key)
         if b != a:
             # For boolean flags, show Yes/No
-            if key.lower() in ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]:
+            if key in ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]:
                 b_str = "Yes" if b else "No"
                 a_str = "Yes" if a else "No"
             else:
