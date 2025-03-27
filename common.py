@@ -436,7 +436,7 @@ def add_user_feedback(user_id, subject, message, category, priority):
     try:
         with conn.cursor() as cursor:
             query = """
-            INSERT INTO user_feedback (user_id, subject, message, category, priority, created_at)
+            INSERT INTO user_feedback (user_id, subject, message, category, priority, timestamp)
             VALUES (%s, %s, %s, %s, %s, NOW())
             """
             cursor.execute(query, (user_id, subject, message, category, priority))
