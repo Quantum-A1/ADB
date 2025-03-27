@@ -23,8 +23,8 @@ with st.form("search_form"):
             user["id"],
             "Search Logged Accounts",
             f"Searched for: {search_term}",
-            {},
-            {}
+            json.dumps({}),
+            json.dumps({})
         )
 
 st.markdown("#### 🔎 Filter by Flags")
@@ -38,6 +38,7 @@ accounts = fetch_all_accounts()
 df_accounts = pd.DataFrame(accounts)
 
 if not df_accounts.empty:
+    # Filter by allowed servers
     df_accounts = df_accounts[df_accounts["server_name"].isin(allowed_servers)]
     if search_term:
         df_accounts = df_accounts[
@@ -52,7 +53,7 @@ if not df_accounts.empty:
         df_accounts = df_accounts[df_accounts["whitelist"] == True]
     if filter_multiple:
         df_accounts = df_accounts[df_accounts["multiple_devices"] == True]
-
+    
     df_accounts = df_accounts.sort_values(by="id", ascending=True)
 
 if not df_accounts.empty:
@@ -86,7 +87,6 @@ if not df_accounts.empty:
         if submit_account_edit:
             before_state = selected_account.copy()
             update_account_details(selected_account_id, new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices)
-            # For after_state, we can combine new values into a dict.
             after_state = {
                 "id": selected_account_id,
                 "gamertag": new_gamertag,
@@ -99,8 +99,8 @@ if not df_accounts.empty:
                 user["id"],
                 "Account Edit",
                 f"Updated account {selected_account_id}",
-                before_state,
-                after_state
+                json.dumps(before_state, default=str),
+                json.dumps(after_state, default=str)
             )
             st.success("Account updated successfully.")
 else:
