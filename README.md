@@ -1,19 +1,37 @@
-# 🎈 Blank app template
+**Welcome to the DayZ Alt Detector Bot**
 
-A simple Streamlit app template for you to modify!
+The DayZ Alt Detector Bot is designed to detect and manage potential alternate (alt) accounts on your DayZ console servers. It integrates with Nitrado server logs, processes player connection data, and stores this data in a MySQL database. The bot scans logs every 5 minutes, detects potential alt accounts based on shared device IDs, and sends alerts to a specific Discord channel.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+🚀 Key Features:
 
-### How to run it on your own machine
+**Automated Log Scanning:**
 
-1. Install the requirements
+Fetches .RPT logs from Nitrado servers every 5 minutes.
+Extracts player data: Gamertag, Gamertag ID, and Device ID.
+Stores data and tracks historical changes.
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+**Alt Account Detection:**
 
-2. Run the app
+Flags accounts as potential alts if they share the same device ID with different gamertag IDs.
+Sends alerts to a Discord channel when an alt is detected.
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+**Player Data Management:**
+
+Tracks player history, including device changes and gamertag updates.
+Allows manual control over alt flags, whitelisting, and watchlisting.
+
+**Database Integration:**
+
+Uses MySQL for efficient data storage.
+Provides real-time database status and player statistics.
+
+
+**🔍 How Alt Detection Works:**
+
+Log Scanning: The bot reads recent DayZ .RPT logs.
+
+Data Extraction: It extracts player gamertags, IDs, and device IDs.
+
+Database Check: Compares device IDs to identify multiple accounts using the same device.
+
+Alert System: Flags potential alts and sends alerts to the configured Discord channel.
