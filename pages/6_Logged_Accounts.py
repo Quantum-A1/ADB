@@ -61,41 +61,6 @@ if not df_accounts.empty:
 else:
     st.write("No logged accounts found for the selected filters.")
 
-def diff_states(before_json, after_json):
-    """
-    Given two JSON strings representing before and after states,
-    return concise diff summaries only for these keys:
-    "gamertag", "alt_flag", "watchlisted", "whitelist", and "multiple_devices".
-    For each key that changed, returns a summary like "Whitelist - No" in the before state
-    and "Whitelist - Yes" in the after state.
-    """
-    keys_to_check = ["gamertag", "alt_flag", "watchlisted", "whitelist", "multiple_devices"]
-    try:
-        before = json.loads(before_json)
-    except Exception:
-        before = {}
-    try:
-        after = json.loads(after_json)
-    except Exception:
-        after = {}
-        
-    if not isinstance(before, dict) or not isinstance(after, dict):
-        return "", ""
-    
-    diffs_before = []
-    diffs_after = []
-    for key in keys_to_check:
-        if before.get(key) != after.get(key):
-            if key in ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]:
-                b_str = "Yes" if before.get(key) else "No"
-                a_str = "Yes" if after.get(key) else "No"
-            else:
-                b_str = str(before.get(key))
-                a_str = str(after.get(key))
-            diffs_before.append(f"{key.capitalize()} - {b_str}")
-            diffs_after.append(f"{key.capitalize()} - {a_str}")
-    return ", ".join(diffs_before), ", ".join(diffs_after)
-
 st.subheader("📋 Edit Account")
 if not df_accounts.empty:
     account_options = df_accounts.apply(
@@ -120,7 +85,8 @@ if not df_accounts.empty:
         
         submit_account_edit = st.form_submit_button("Update Account")
         if submit_account_edit:
-            before_state = selected_account.copy()
+            # Convert the Series to a dict to properly log the before state.
+            before_state = selected_account.to_dict()
             update_account_details(selected_account_id, new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices)
             after_state = {
                 "id": selected_account_id,
