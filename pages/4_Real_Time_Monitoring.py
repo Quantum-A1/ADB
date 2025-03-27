@@ -33,7 +33,6 @@ else:
     server_options = ["All"] + fetch_servers()
 
 st.header("📊 Real-Time Monitoring & Alerts")
-
 st_autorefresh(interval=60000, key="real_time_monitor")
 selected_server = st.selectbox("Select Server", options=server_options)
 
@@ -58,7 +57,13 @@ else:
 
 st.subheader("Detected Alt Accounts (Grouped by Device)")
 
+# Fetch alt accounts based on the selected server.
 alt_accounts = fetch_alt_accounts(selected_server)
+# If the user selected "All", further restrict alt accounts to those from allowed servers.
+if selected_server == "All":
+    allowed_servers = fetch_servers_for_user(user["id"]) if access_level == "user" else fetch_servers()
+    alt_accounts = [acc for acc in alt_accounts if acc.get("server_name") in allowed_servers]
+
 if alt_accounts:
     device_groups = {}
     for account in alt_accounts:
