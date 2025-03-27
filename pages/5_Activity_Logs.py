@@ -8,11 +8,16 @@ def diff_states(before_json, after_json):
     """
     Given two JSON strings representing before and after states,
     return concise diff summaries for only the fields that changed.
+    If the parsed values are not dictionaries, return the original strings.
     """
     try:
         before = json.loads(before_json)
         after = json.loads(after_json)
     except Exception as e:
+        return before_json, after_json
+
+    # If the parsed values are not dictionaries, return the raw strings.
+    if not isinstance(before, dict) or not isinstance(after, dict):
         return before_json, after_json
 
     diffs_before = []
@@ -40,16 +45,14 @@ search_term = st.text_input("Search Logs", "")
 logs = fetch_activity_logs()
 df_logs = pd.DataFrame(logs)
 
-# If there are logs, process them.
 if not df_logs.empty:
-    # If a search term is provided, filter logs.
     if search_term:
+        # Filter by user_id, action, or details
         df_logs = df_logs[
             df_logs["user_id"].str.contains(search_term, case=False) |
             df_logs["action"].str.contains(search_term, case=False) |
             df_logs["details"].str.contains(search_term, case=False)
         ]
-    
     # Process rows for "Account Edit" to show concise before/after differences.
     for idx, row in df_logs.iterrows():
         if row.get("action") == "Account Edit":
