@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import json
 from common import (
     BOT_OWNER_ID,
     get_db_connection,
@@ -10,15 +11,15 @@ from common import (
     add_user_access,
     remove_user_by_discord_id,
     update_user_access,
-    fetch_servers,                  # all available servers
-    assign_servers_to_user,         # helper function to assign servers
-    get_assigned_servers_for_user   # helper function to get assigned servers
+    fetch_servers,                  
+    assign_servers_to_user,        
+    get_assigned_servers_for_user,
+    log_activity  # Import logging helper
 )
 
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
-# Restrict access: only admin, super-admin, or bot owner.
 if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
     st.error("Access Denied: Only admin, super-admin, or bot owner can access this page.")
     st.stop()
@@ -26,7 +27,6 @@ if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
 st.header("👤 User Management")
 search_term = st.text_input("Search Users", "")
 
-# Fetch user access records once
 df_users_full = fetch_user_access()
 if not df_users_full.empty and search_term:
     df_users = df_users_full[
@@ -36,7 +36,6 @@ if not df_users_full.empty and search_term:
 else:
     df_users = df_users_full
 
-# --- User Stats Section (Metrics & Pie Chart) ---
 if not df_users.empty:
     access_counts = df_users["access_level"].value_counts().to_dict()
     total_users = len(df_users)
@@ -62,7 +61,6 @@ if not df_users.empty:
 else:
     st.write("No user access records found.")
 
-# --- Current Users Table with Assigned Servers ---
 st.subheader("Current Users")
 if not df_users.empty:
     def get_assigned(d_id):
@@ -73,7 +71,6 @@ if not df_users.empty:
 else:
     st.write("No user access records found.")
 
-# --- Add New User Section ---
 st.subheader("➕ Add New User")
 with st.form("add_user_form", clear_on_submit=True):
     new_discord_id = st.text_input("Discord ID")
@@ -83,27 +80,29 @@ with st.form("add_user_form", clear_on_submit=True):
     if add_submitted:
         if new_discord_id and new_username:
             add_user_access(new_discord_id, new_username, new_access)
+            log_activity(
+                user["id"],
+                "Add New User",
+                f"Added user with Discord ID {new_discord_id}",
+                {},
+                {"discord_id": new_discord_id, "username": new_username, "access_level": new_access}
+            )
         else:
             st.error("Please provide both Discord ID and Username.")
 
-# --- Unified Edit User Section ---
 st.subheader("📋 Edit User")
 if not df_users.empty:
-    # Build dropdown: each option is (discord_id, "username (discord_id)")
     user_options = df_users.apply(
         lambda row: (row["discord_id"], f"{row['username']} ({row['discord_id']})"), axis=1
     ).tolist()
-    selected_discord_id = st.selectbox(
+    selected_account = st.selectbox(
         "Select a user to edit",
         options=[opt[0] for opt in user_options],
         format_func=lambda x: next((opt[1] for opt in user_options if opt[0] == x), x)
     )
-    # Retrieve the selected user's record.
-    selected_user_record = df_users[df_users["discord_id"] == selected_discord_id].iloc[0]
-    # Pre-load assigned servers for this user.
-    current_assigned_servers = get_assigned_servers_for_user(selected_discord_id)
+    selected_user_record = df_users[df_users["discord_id"] == selected_account].iloc[0]
+    current_assigned_servers = get_assigned_servers_for_user(selected_account)
     
-    # Define role hierarchy.
     hierarchy = {"user": 1, "moderator": 2, "admin": 3, "super-admin": 4}
     current_logged_in_level = hierarchy.get(user["access_level"], 1)
     selected_user_level = hierarchy.get(selected_user_record.get("access_level", "user"), 1)
@@ -119,7 +118,7 @@ if not df_users.empty:
         )
         new_assigned_servers = st.multiselect(
             "Assigned Servers",
-            options=fetch_servers(),  # all available servers
+            options=fetch_servers(),
             default=current_assigned_servers
         )
         col1, col2, col3 = st.columns(3)
@@ -127,39 +126,79 @@ if not df_users.empty:
         remove_button = col2.form_submit_button("Remove User")
         update_servers_button = col3.form_submit_button("Update Server Assignments")
         
-        # If not the bot owner, enforce that you cannot modify a user with equal or higher permission.
         if user["id"] != st.secrets["BOT_OWNER_ID"]:
             if update_button:
-                new_level = hierarchy.get(new_access, 1)
-                if current_logged_in_level <= selected_user_level:
-                    st.error("You cannot update a user with equal or higher permissions than yours.")
-                elif new_level > current_logged_in_level:
-                    st.error("You cannot set a user's permission level to be higher than yours.")
-                else:
-                    update_user_access(selected_discord_id, new_username, new_access)
-                    st.success("User information updated successfully.")
-            if remove_button:
-                if current_logged_in_level <= selected_user_level:
-                    st.error("You cannot remove a user with equal or higher permissions than yours.")
-                else:
-                    remove_user_by_discord_id(selected_discord_id)
-                    st.success("User removed successfully.")
-            if update_servers_button:
-                if current_logged_in_level <= selected_user_level:
-                    st.error("You cannot update server assignments for a user with equal or higher permissions than yours.")
-                else:
-                    assign_servers_to_user(selected_discord_id, new_assigned_servers)
-                    st.success("Server assignments updated successfully.")
-        else:
-            # Bot owner bypasses permission checks.
-            if update_button:
-                update_user_access(selected_discord_id, new_username, new_access)
+                before = selected_user_record.copy()
+                update_user_access(selected_account, new_username, new_access)
+                after = selected_user_record.copy()
+                after["username"] = new_username
+                after["access_level"] = new_access
+                log_activity(
+                    user["id"],
+                    "User Access Update",
+                    "Updated user info",
+                    before,
+                    after
+                )
                 st.success("User information updated successfully.")
             if remove_button:
-                remove_user_by_discord_id(selected_discord_id)
+                log_activity(
+                    user["id"],
+                    "Remove User",
+                    f"Removed user {selected_account}",
+                    selected_user_record,
+                    {}
+                )
+                remove_user_by_discord_id(selected_account)
                 st.success("User removed successfully.")
             if update_servers_button:
-                assign_servers_to_user(selected_discord_id, new_assigned_servers)
+                before = {"assigned_servers": current_assigned_servers}
+                assign_servers_to_user(selected_account, new_assigned_servers)
+                after = {"assigned_servers": new_assigned_servers}
+                log_activity(
+                    user["id"],
+                    "Update Server Assignments",
+                    "Updated server assignments",
+                    before,
+                    after
+                )
+                st.success("Server assignments updated successfully.")
+        else:
+            if update_button:
+                before = selected_user_record.copy()
+                update_user_access(selected_account, new_username, new_access)
+                after = selected_user_record.copy()
+                after["username"] = new_username
+                after["access_level"] = new_access
+                log_activity(
+                    user["id"],
+                    "User Access Update (Bot Owner)",
+                    "Updated user info",
+                    before,
+                    after
+                )
+                st.success("User information updated successfully.")
+            if remove_button:
+                log_activity(
+                    user["id"],
+                    "Remove User (Bot Owner)",
+                    f"Removed user {selected_account}",
+                    selected_user_record,
+                    {}
+                )
+                remove_user_by_discord_id(selected_account)
+                st.success("User removed successfully.")
+            if update_servers_button:
+                before = {"assigned_servers": current_assigned_servers}
+                assign_servers_to_user(selected_account, new_assigned_servers)
+                after = {"assigned_servers": new_assigned_servers}
+                log_activity(
+                    user["id"],
+                    "Update Server Assignments (Bot Owner)",
+                    "Updated server assignments",
+                    before,
+                    after
+                )
                 st.success("Server assignments updated successfully.")
 else:
     st.write("No user records to edit.")

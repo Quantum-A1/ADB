@@ -1,12 +1,12 @@
 # LoggedAccounts.py
 import streamlit as st
 import pandas as pd
-from common import fetch_all_accounts, update_account_details, fetch_servers, fetch_servers_for_user
+import json
+from common import fetch_all_accounts, update_account_details, fetch_servers, fetch_servers_for_user, log_activity
 
 user = st.session_state.get("user")
 access_level = user.get("access_level", "user")
 
-# Determine allowed servers for this user.
 if access_level == "user":
     allowed_servers = fetch_servers_for_user(user["id"])
 else:
@@ -14,33 +14,36 @@ else:
 
 st.header("📝 Logged Accounts")
 
-# Search bar to filter on gamertag or device_id
-search_term = st.text_input("Search Logged Accounts (Gamertag or Device ID)", "")
+# Wrap search in a form to log searches.
+with st.form("search_form"):
+    search_term = st.text_input("Search Logged Accounts (Gamertag or Device ID)", "")
+    search_submitted = st.form_submit_button("Search")
+    if search_submitted and search_term:
+        log_activity(
+            user["id"],
+            "Search Logged Accounts",
+            f"Searched for: {search_term}",
+            {},
+            {}
+        )
 
 st.markdown("#### 🔎 Filter by Flags")
-# Arrange the flag checkboxes in a row using st.columns.
 cols = st.columns(4)
 filter_alt = cols[0].checkbox("Alt Accounts", value=False)
 filter_watchlisted = cols[1].checkbox("Watchlisted", value=False)
 filter_whitelisted = cols[2].checkbox("Whitelisted", value=False)
 filter_multiple = cols[3].checkbox("Multiple Device Accounts", value=False)
 
-# Fetch all logged accounts
 accounts = fetch_all_accounts()
 df_accounts = pd.DataFrame(accounts)
 
 if not df_accounts.empty:
-    # Filter by allowed servers
     df_accounts = df_accounts[df_accounts["server_name"].isin(allowed_servers)]
-
-    # Apply search filtering on gamertag or device_id
     if search_term:
         df_accounts = df_accounts[
             df_accounts["gamertag"].str.contains(search_term, case=False, na=False) |
             df_accounts["device_id"].str.contains(search_term, case=False, na=False)
         ]
-
-    # Apply flag filters (only show accounts that meet ALL checked conditions)
     if filter_alt:
         df_accounts = df_accounts[df_accounts["alt_flag"] == True]
     if filter_watchlisted:
@@ -50,19 +53,15 @@ if not df_accounts.empty:
     if filter_multiple:
         df_accounts = df_accounts[df_accounts["multiple_devices"] == True]
 
-    # Sort by ID in ascending order
     df_accounts = df_accounts.sort_values(by="id", ascending=True)
 
-# Display the filtered accounts table
 if not df_accounts.empty:
     st.dataframe(df_accounts)
 else:
     st.write("No logged accounts found for the selected filters.")
 
-# --- Edit Account Section ---
 st.subheader("📋 Edit Account")
 if not df_accounts.empty:
-    # Build dropdown options based on account id and descriptive text.
     account_options = df_accounts.apply(
         lambda row: (
             row["id"],
@@ -74,7 +73,6 @@ if not df_accounts.empty:
         options=[opt[0] for opt in account_options],
         format_func=lambda x: next((opt[1] for opt in account_options if opt[0] == x), str(x))
     )
-    # Retrieve the selected account details
     selected_account = df_accounts[df_accounts["id"] == selected_account_id].iloc[0]
     
     with st.form("edit_account_form", clear_on_submit=True):
@@ -86,7 +84,24 @@ if not df_accounts.empty:
         
         submit_account_edit = st.form_submit_button("Update Account")
         if submit_account_edit:
+            before_state = selected_account.copy()
             update_account_details(selected_account_id, new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices)
+            # For after_state, we can combine new values into a dict.
+            after_state = {
+                "id": selected_account_id,
+                "gamertag": new_gamertag,
+                "alt_flag": alt_flag,
+                "watchlisted": watchlisted,
+                "whitelist": whitelist,
+                "multiple_devices": multiple_devices
+            }
+            log_activity(
+                user["id"],
+                "Account Edit",
+                f"Updated account {selected_account_id}",
+                before_state,
+                after_state
+            )
             st.success("Account updated successfully.")
 else:
     st.write("No account available for editing.")

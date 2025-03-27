@@ -255,6 +255,8 @@ def update_server_config(new_config, old_server):
     finally:
         release_db_connection(conn)
 
+# Helpers        
+
 def fetch_server_config(server_name):
     conn = get_db_connection()
     try:
@@ -398,21 +400,23 @@ def get_assigned_servers_for_user(discord_id):
     finally:
         release_db_connection(conn)
 
-# In common.py, add these functions
 
-def log_activity(user_id, action, details):
-    """Logs an activity performed by a user."""
+def log_activity(user_id, action, details, before_state, after_state):
+    """
+    Logs an activity with details including before and after states.
+    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             query = """
-            INSERT INTO activity_logs (user_id, action, details, timestamp)
-            VALUES (%s, %s, %s, NOW())
+                INSERT INTO activity_logs (user_id, action, details, before_state, after_state, timestamp)
+                VALUES (%s, %s, %s, %s, %s, NOW())
             """
-            cursor.execute(query, (user_id, action, details))
+            cursor.execute(query, (user_id, action, details, before_state, after_state))
             conn.commit()
     finally:
         release_db_connection(conn)
+
 
 def fetch_activity_logs():
     """Fetches all activity logs ordered by the most recent."""
@@ -425,7 +429,6 @@ def fetch_activity_logs():
         release_db_connection(conn)
     return logs
 
-# In common.py, add these functions
 
 def add_user_feedback(user_id, subject, message):
     """Insert user feedback into the database."""
