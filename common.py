@@ -431,19 +431,19 @@ def fetch_activity_logs():
     return logs
 
 
-def add_user_feedback(user_id, subject, message):
-    """Insert user feedback into the database."""
+def add_user_feedback(user_id, subject, message, category, priority):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             query = """
-            INSERT INTO user_feedback (user_id, subject, message, timestamp)
-            VALUES (%s, %s, %s, NOW())
+            INSERT INTO user_feedback (user_id, subject, message, category, priority, created_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
             """
-            cursor.execute(query, (user_id, subject, message))
+            cursor.execute(query, (user_id, subject, message, category, priority))
             conn.commit()
     finally:
         release_db_connection(conn)
+
 
 def fetch_feedback():
     """Fetch all feedback entries."""
