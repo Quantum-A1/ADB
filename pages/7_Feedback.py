@@ -33,7 +33,8 @@ with st.form("feedback_form", clear_on_submit=True):
                 "category": category,
                 "priority": priority
             }
-            add_user_feedback(user["id"], subject, feedback_details)
+            # Convert the feedback_details dict to a JSON string before passing it
+            add_user_feedback(user["id"], subject, json.dumps(feedback_details, default=str))
             st.success("Feedback submitted! Thank you.")
         else:
             st.error("Please fill out both the subject and message.")
