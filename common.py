@@ -349,15 +349,16 @@ def update_user_access(discord_id, new_username, new_access):
 
 def remove_user_by_discord_id(discord_id):
     """
-    Removes a user from the user_access table using their Discord ID.
+    Removes a user from the user_access table and deletes associated server assignments.
     """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            query = "DELETE FROM user_access WHERE discord_id = %s"
-            cursor.execute(query, (discord_id,))
+            # First remove assignments from the user_servers table
+            cursor.execute("DELETE FROM user_servers WHERE discord_id = %s", (discord_id,))
+            # Then remove the user from the user_access table
+            cursor.execute("DELETE FROM user_access WHERE discord_id = %s", (discord_id,))
             conn.commit()
-            st.success("User removed successfully.")
     except Exception as e:
         st.error(f"Error removing user: {e}")
     finally:
