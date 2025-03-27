@@ -14,12 +14,24 @@ from common import (
     fetch_servers,                  
     assign_servers_to_user,        
     get_assigned_servers_for_user,
-    log_activity  # Import logging helper
+    log_activity,
+    get_user_record
 )
 
+# --- Authorization Check ---
 user = st.session_state.get("user")
-access_level = user.get("access_level", "user")
+if not user:
+    st.error("Please log in.")
+    st.stop()
+user_record = get_user_record(user["id"])
+if not user_record:
+    st.error("Your account is not authorized. Please contact an administrator.")
+    st.stop()
+user["access_level"] = user_record.get("access_level", "user")
+st.session_state["user"] = user
+# --- End Authorization Check ---
 
+access_level = user.get("access_level", "user")
 if access_level not in ["admin", "super-admin"] and user["id"] != BOT_OWNER_ID:
     st.error("Access Denied: Only admin, super-admin, or bot owner can access this page.")
     st.stop()

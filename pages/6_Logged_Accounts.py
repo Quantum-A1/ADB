@@ -2,11 +2,22 @@
 import streamlit as st
 import pandas as pd
 import json
-from common import fetch_all_accounts, update_account_details, fetch_servers, fetch_servers_for_user, log_activity
+from common import fetch_all_accounts, update_account_details, fetch_servers, fetch_servers_for_user, log_activity, get_user_record
 
+# --- Authorization Check ---
 user = st.session_state.get("user")
-access_level = user.get("access_level", "user")
+if not user:
+    st.error("Please log in.")
+    st.stop()
+user_record = get_user_record(user["id"])
+if not user_record:
+    st.error("Your account is not authorized. Please contact an administrator.")
+    st.stop()
+user["access_level"] = user_record.get("access_level", "user")
+st.session_state["user"] = user
+# --- End Authorization Check ---
 
+access_level = user.get("access_level", "user")
 if access_level == "user":
     allowed_servers = fetch_servers_for_user(user["id"])
 else:
@@ -38,7 +49,6 @@ accounts = fetch_all_accounts()
 df_accounts = pd.DataFrame(accounts)
 
 if not df_accounts.empty:
-    # Filter by allowed servers
     df_accounts = df_accounts[df_accounts["server_name"].isin(allowed_servers)]
     if search_term:
         df_accounts = df_accounts[
@@ -85,7 +95,6 @@ if not df_accounts.empty:
         
         submit_account_edit = st.form_submit_button("Update Account")
         if submit_account_edit:
-            # Convert the Series to a dict to properly log the before state.
             before_state = selected_account.to_dict()
             update_account_details(selected_account_id, new_gamertag, alt_flag, watchlisted, whitelist, multiple_devices)
             after_state = {
