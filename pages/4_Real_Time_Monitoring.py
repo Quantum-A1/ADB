@@ -84,7 +84,6 @@ if alt_accounts:
     end_index = start_index + items_per_page
 
     for device_id in sorted_device_ids[start_index:end_index]:
-        st.write(f"**Device ID:** {device_id}")
         main_account = fetch_main_account_by_device(device_id)
         if main_account:
             st.write("**👑 Main Account:**")
