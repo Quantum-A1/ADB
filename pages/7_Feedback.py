@@ -1,6 +1,7 @@
 # Feedback.py
 import streamlit as st
 import pandas as pd
+import json
 from common import add_user_feedback, fetch_feedback, get_user_record
 
 # --- Authorization Check ---
@@ -21,10 +22,18 @@ st.header("User Feedback & Support")
 with st.form("feedback_form", clear_on_submit=True):
     subject = st.text_input("Subject")
     message = st.text_area("Message")
+    category = st.selectbox("Category", ["Bug Report", "Feature Request", "General Feedback"])
+    priority = st.selectbox("Priority", ["Low", "Medium", "High"])
     submitted = st.form_submit_button("Submit Feedback")
     if submitted:
         if subject and message:
-            add_user_feedback(user["id"], subject, message)
+            feedback_details = {
+                "subject": subject,
+                "message": message,
+                "category": category,
+                "priority": priority
+            }
+            add_user_feedback(user["id"], subject, feedback_details)
             st.success("Feedback submitted! Thank you.")
         else:
             st.error("Please fill out both the subject and message.")
