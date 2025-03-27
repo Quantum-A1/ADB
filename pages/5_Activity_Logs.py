@@ -7,12 +7,12 @@ from common import fetch_activity_logs
 def diff_states(before_json, after_json):
     """
     Given two JSON strings representing before and after states,
-    return concise diff summaries for only the keys:
-    'alt_flag', 'watchlisted', 'whitelist', and 'multiple_devices'.
-    For each key that has changed, it returns a summary like:
-    "Whitelist - No" in the before state and "Whitelist - Yes" in the after state.
+    return concise diff summaries only for these keys:
+    "alt_flag", "watchlisted", "whitelist", and "multiple_devices".
+    If the parsed values are not dictionaries, return empty diffs.
     """
     keys_to_check = ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]
+    
     try:
         before = json.loads(before_json)
     except Exception:
@@ -21,20 +21,20 @@ def diff_states(before_json, after_json):
         after = json.loads(after_json)
     except Exception:
         after = {}
-        
+    
+    # If either parsed value is not a dict, return no diff.
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return "", ""
+    
     diffs_before = []
     diffs_after = []
     for key in keys_to_check:
-        b = before.get(key)
-        a = after.get(key)
-        if b != a:
+        if before.get(key) != after.get(key):
             # For boolean flags, show Yes/No
-            if key in ["alt_flag", "watchlisted", "whitelist", "multiple_devices"]:
-                b_str = "Yes" if b else "No"
-                a_str = "Yes" if a else "No"
-            else:
-                b_str = str(b)
-                a_str = str(a)
+            b = before.get(key)
+            a = after.get(key)
+            b_str = "Yes" if b else "No"
+            a_str = "Yes" if a else "No"
             diffs_before.append(f"{key.capitalize()} - {b_str}")
             diffs_after.append(f"{key.capitalize()} - {a_str}")
     return ", ".join(diffs_before), ", ".join(diffs_after)
@@ -48,7 +48,6 @@ df_logs = pd.DataFrame(logs)
 
 if not df_logs.empty:
     if search_term:
-        # Filter by user_id, action, or details
         df_logs = df_logs[
             df_logs["user_id"].str.contains(search_term, case=False) |
             df_logs["action"].str.contains(search_term, case=False) |
