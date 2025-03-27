@@ -84,8 +84,8 @@ with st.form("add_user_form", clear_on_submit=True):
                 user["id"],
                 "Add New User",
                 f"Added user with Discord ID {new_discord_id}",
-                {},
-                {"discord_id": new_discord_id, "username": new_username, "access_level": new_access}
+                json.dumps({}),
+                json.dumps({"discord_id": new_discord_id, "username": new_username, "access_level": new_access}, default=str)
             )
         else:
             st.error("Please provide both Discord ID and Username.")
@@ -128,26 +128,27 @@ if not df_users.empty:
         
         if user["id"] != st.secrets["BOT_OWNER_ID"]:
             if update_button:
-                before = selected_user_record.copy()
+                before = selected_user_record.to_dict()
                 update_user_access(selected_account, new_username, new_access)
-                after = selected_user_record.copy()
+                after = selected_user_record.to_dict()
                 after["username"] = new_username
                 after["access_level"] = new_access
                 log_activity(
                     user["id"],
                     "User Access Update",
                     "Updated user info",
-                    before,
-                    after
+                    json.dumps(before, default=str),
+                    json.dumps(after, default=str)
                 )
                 st.success("User information updated successfully.")
             if remove_button:
+                before = selected_user_record.to_dict()
                 log_activity(
                     user["id"],
                     "Remove User",
-                    f"Removed user {selected_account}",
-                    selected_user_record,
-                    {}
+                    f"Removed user {selected_account} ({selected_user_record.get('username')})",
+                    json.dumps(before, default=str),
+                    json.dumps({}, default=str)
                 )
                 remove_user_by_discord_id(selected_account)
                 st.success("User removed successfully.")
@@ -159,32 +160,33 @@ if not df_users.empty:
                     user["id"],
                     "Update Server Assignments",
                     "Updated server assignments",
-                    before,
-                    after
+                    json.dumps(before, default=str),
+                    json.dumps(after, default=str)
                 )
                 st.success("Server assignments updated successfully.")
         else:
             if update_button:
-                before = selected_user_record.copy()
+                before = selected_user_record.to_dict()
                 update_user_access(selected_account, new_username, new_access)
-                after = selected_user_record.copy()
+                after = selected_user_record.to_dict()
                 after["username"] = new_username
                 after["access_level"] = new_access
                 log_activity(
                     user["id"],
                     "User Access Update (Bot Owner)",
                     "Updated user info",
-                    before,
-                    after
+                    json.dumps(before, default=str),
+                    json.dumps(after, default=str)
                 )
                 st.success("User information updated successfully.")
             if remove_button:
+                before = selected_user_record.to_dict()
                 log_activity(
                     user["id"],
                     "Remove User (Bot Owner)",
-                    f"Removed user {selected_account}",
-                    selected_user_record,
-                    {}
+                    f"Removed user {selected_account} ({selected_user_record.get('username')})",
+                    json.dumps(before, default=str),
+                    json.dumps({}, default=str)
                 )
                 remove_user_by_discord_id(selected_account)
                 st.success("User removed successfully.")
@@ -196,8 +198,8 @@ if not df_users.empty:
                     user["id"],
                     "Update Server Assignments (Bot Owner)",
                     "Updated server assignments",
-                    before,
-                    after
+                    json.dumps(before, default=str),
+                    json.dumps(after, default=str)
                 )
                 st.success("Server assignments updated successfully.")
 else:
